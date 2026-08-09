@@ -59,7 +59,7 @@
   .btn-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
   /* ---------- Stat tiles ---------- */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
   .stat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--brand-green); }
   .stat.s-green::before { background: var(--brand-green); }
@@ -234,7 +234,6 @@
     <div class="stat s-green"><div class="label">Checked in today</div><div class="value" id="statCheckedIn">—</div><div class="sub" id="statCheckedInSub">&nbsp;</div></div>
     <div class="stat s-purple"><div class="label">Collected today</div><div class="value" id="statCollected">—</div><div class="sub" id="statCollectedSub">&nbsp;</div></div>
     <div class="stat s-amber"><div class="label">Awaiting pickup</div><div class="value" id="statAwaiting">—</div><div class="sub">&nbsp;</div></div>
-    <div class="stat s-coral"><div class="label">Late collections</div><div class="value" id="statLate">—</div><div class="sub">trailing 7 days</div></div>
   </section>
 
   <div class="grid">
@@ -449,7 +448,6 @@
       ? (Math.round(100 * (s.collected_today / s.checked_in_today)) + '% of today')
       : ' ';
     el('statAwaiting').textContent = s.awaiting_pickup ?? '—';
-    el('statLate').textContent = s.late_collections_7d ?? '—';
   }
 
   function fmtElapsed(ms) {
