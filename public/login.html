@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Howick Pre-Primary — Aftercare Tracker</title>
+<link rel="stylesheet" href="/fonts.css">
+<style>
+  :root {
+    --paper: #F7F5EC;
+    --surface: #FFFFFF;
+    --ink: #20281F;
+    --ink-soft: #5C6456;
+    --ink-faint: #8B9285;
+    --line: #E6E1D0;
+    --line-strong: #D5CEB4;
+    --brand-green: #3FA637;
+    --brand-green-deep: #12724F;
+    --brand-blue: #0287D6;
+    --brand-orange: #FF9900;
+    --brand-coral: #E9463F;
+    --shadow: 0 1px 2px rgba(32, 40, 31, 0.06), 0 10px 26px -14px rgba(32, 40, 31, 0.22);
+    --font-display: 'Jost', ui-sans-serif, 'Segoe UI', sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171C15; --surface: #20261D; --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+      --line: #333A2D; --line-strong: #414938;
+      --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
+      --brand-orange: #FFA51F; --brand-coral: #FF7A72;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px -14px rgba(0,0,0,0.65);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #171C15; --surface: #20261D; --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+    --line: #333A2D; --line-strong: #414938;
+    --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
+    --brand-orange: #FFA51F; --brand-coral: #FF7A72;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px -14px rgba(0,0,0,0.65);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .login-box {
+    width: 100%;
+    max-width: 340px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 30px 26px;
+    box-shadow: var(--shadow);
+  }
+  .badge-mark {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(155deg, var(--brand-green) 0%, var(--brand-green-deep) 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: 20px; font-weight: 700; margin: 0 0 2px; color: var(--ink);
+  }
+  h1 .w-howick { color: var(--brand-green); }
+  h1 .w-sub { display: block; font-size: 13px; font-weight: 500; color: var(--brand-blue); }
+  .sub { font-size: 12.5px; color: var(--ink-soft); margin: 10px 0 20px; }
+  label {
+    display: block; font-size: 11px; font-weight: 700; color: var(--ink-soft);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;
+    font-family: var(--font-display);
+  }
+  input {
+    width: 100%; padding: 10px 12px; margin-bottom: 14px;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px;
+    color: var(--ink); font-size: 13.5px; font-family: var(--font-body);
+  }
+  input:focus { outline: 2px solid var(--brand-blue); outline-offset: 1px; }
+  button {
+    width: 100%; padding: 11px; background: var(--brand-orange); color: #fff;
+    border: none; border-radius: 999px; font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-display);
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.06); }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .error-message { margin-top: 12px; font-size: 12.5px; color: var(--brand-coral); }
+</style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="badge-mark">H</div>
+    <h1><span class="w-howick">Howick</span><span class="w-sub">Aftercare Tracker</span></h1>
+    <p class="sub">Sign in to record arrivals and collections.</p>
+    <form id="login-form">
+      <label>Username</label>
+      <input type="text" name="username" required autocomplete="username" autofocus>
+      <label>Password</label>
+      <input type="password" name="password" required autocomplete="current-password">
+      <button type="submit">Log in</button>
+    </form>
+    <div id="error-message" class="error-message" hidden></div>
+  </div>
+  <script>
+    const form = document.getElementById('login-form');
+    const errorEl = document.getElementById('error-message');
+    const params = new URLSearchParams(location.search);
+    const next = params.get('next') || '/';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.hidden = true;
+      const button = form.querySelector('button');
+      button.disabled = true;
+      try {
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          location.href = next;
+        } else {
+          const data = await res.json().catch(() => ({}));
+          errorEl.textContent = data.error || 'Login failed';
+          errorEl.hidden = false;
+        }
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

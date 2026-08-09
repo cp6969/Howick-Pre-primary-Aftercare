@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Howick Pre-Primary — Aftercare Tracker</title>
+<link rel="stylesheet" href="/fonts.css">
+<style>
+  :root {
+    --paper: #F7F5EC;
+    --surface: #FFFFFF;
+    --surface-2: #F1EFE3;
+    --surface-yellow: #FFF7D6;
+    --surface-yellow-line: #F5E8A6;
+    --ink: #20281F;
+    --ink-soft: #5C6456;
+    --ink-faint: #8B9285;
+    --line: #E6E1D0;
+    --line-strong: #D5CEB4;
+
+    --brand-green: #3FA637;
+    --brand-green-deep: #12724F;
+    --brand-blue: #0287D6;
+    --brand-sky-tint: #E4F7FB;
+    --brand-amber: #F0A400;
+    --brand-orange: #FF9900;
+    --brand-orange-ink: #7A3D00;
+    --brand-purple: #785299;
+    --brand-purple-ink: #FFFFFF;
+    --brand-coral: #E9463F;
+    --brand-coral-tint: #FDE7E5;
+
+    --status-in-fg: #1C7A45;
+    --status-in-bg: #E1F3E3;
+    --status-pending-fg: #8A5E00;
+    --status-pending-bg: #FFF0C7;
+    --status-out-fg: #62675A;
+    --status-out-bg: #EDEAD9;
+    --status-late-fg: #C23B32;
+    --status-late-bg: #FBE1DE;
+
+    --shadow: 0 1px 2px rgba(32, 40, 31, 0.06), 0 10px 26px -14px rgba(32, 40, 31, 0.22);
+
+    --font-display: 'Jost', ui-sans-serif, 'Segoe UI', sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
+      --surface-yellow: #332C12; --surface-yellow-line: #4A3F17;
+      --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+      --line: #333A2D; --line-strong: #414938;
+      --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
+      --brand-sky-tint: #163038; --brand-amber: #F5BC3E; --brand-orange: #FFA51F;
+      --brand-orange-ink: #241200; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
+      --brand-coral: #FF7A72; --brand-coral-tint: #3A1E1B;
+      --status-in-fg: #7FDD9C; --status-in-bg: #1D3826;
+      --status-pending-fg: #F0C15C; --status-pending-bg: #3A2E0C;
+      --status-out-fg: #B4B9A8; --status-out-bg: #282E23;
+      --status-late-fg: #FF9B92; --status-late-bg: #3A211E;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
+    --surface-yellow: #332C12; --surface-yellow-line: #4A3F17;
+    --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+    --line: #333A2D; --line-strong: #414938;
+    --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
+    --brand-sky-tint: #163038; --brand-amber: #F5BC3E; --brand-orange: #FFA51F;
+    --brand-orange-ink: #241200; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
+    --brand-coral: #FF7A72; --brand-coral-tint: #3A1E1B;
+    --status-in-fg: #7FDD9C; --status-in-bg: #1D3826;
+    --status-pending-fg: #F0C15C; --status-pending-bg: #3A2E0C;
+    --status-out-fg: #B4B9A8; --status-out-bg: #282E23;
+    --status-late-fg: #FF9B92; --status-late-bg: #3A211E;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+  body { padding: 0 0 56px; min-height: 100vh; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px) 0; display: flex; flex-direction: column; gap: 22px; }
+
+  /* ---------- Header ---------- */
+  .masthead-outer { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .masthead {
+    max-width: 1180px; margin: 0 auto; padding: 20px clamp(16px, 4vw, 48px) 22px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  }
+  .masthead-id { display: flex; align-items: center; gap: 14px; }
+  .badge-mark {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(155deg, var(--brand-green) 0%, var(--brand-green-deep) 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 20px; flex-shrink: 0; box-shadow: var(--shadow);
+  }
+  .wordmark { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 3vw, 27px); line-height: 1.05; letter-spacing: -0.01em; }
+  .wordmark .w-howick { color: var(--brand-green); }
+  .wordmark .w-sub { display: block; font-family: var(--font-display); font-weight: 500; font-size: 13px; color: var(--brand-blue); letter-spacing: 0.01em; margin-top: 1px; }
+  .masthead .tagline { margin: 4px 0 0; color: var(--ink-soft); font-size: 13.5px; letter-spacing: 0.01em; }
+  .masthead-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-soft); flex-wrap: wrap; }
+  .masthead-meta .date { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); font-size: 14px; }
+
+  .scallop {
+    height: 14px; background-color: var(--paper);
+    background-image: radial-gradient(circle at 11px 0, var(--surface) 11px, transparent 12px);
+    background-size: 22px 14px; background-repeat: repeat-x; background-position: center top;
+  }
+
+  .btn {
+    appearance: none; border: none; cursor: pointer; font-family: var(--font-display);
+    font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    border-radius: 999px; padding: 11px 20px; display: inline-flex; align-items: center; gap: 8px;
+    transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease; text-decoration: none;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+  .btn-primary { background: var(--brand-orange); color: #fff; box-shadow: 0 6px 16px -8px rgba(255, 153, 0, 0.7); }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-ghost { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line-strong); }
+  .btn-ghost:hover { background: var(--surface); color: var(--ink); }
+  .btn-purple { background: var(--brand-purple); color: var(--brand-purple-ink); }
+  .btn-purple:hover { filter: brightness(1.08); }
+  .btn-sm { padding: 7px 14px; font-size: 11.5px; }
+  .btn[disabled] { opacity: 0.5; cursor: default; pointer-events: none; }
+
+  /* ---------- Stat tiles ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .stat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--brand-green); }
+  .stat.s-green::before { background: var(--brand-green); }
+  .stat.s-amber::before { background: var(--brand-amber); }
+  .stat.s-coral::before { background: var(--brand-coral); }
+  .stat.s-purple::before { background: var(--brand-purple); }
+  .stat .label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); font-weight: 600; font-family: var(--font-display); }
+  .stat .value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 600; margin-top: 8px; color: var(--ink); line-height: 1; }
+  .stat.s-green .value { color: var(--brand-green-deep); }
+  .stat.s-amber .value { color: var(--brand-amber); }
+  .stat.s-coral .value { color: var(--brand-coral); }
+  .stat.s-purple .value { color: var(--brand-purple); }
+  .stat .sub { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
+
+  /* ---------- Main grid ---------- */
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); gap: 12px; flex-wrap: wrap; }
+  .panel-head h2 { font-family: var(--font-display); font-size: 18px; margin: 0; font-weight: 600; }
+  .panel-head .count { font-size: 12.5px; color: var(--ink-faint); font-family: var(--font-mono); }
+  .search-row { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .search-row input, .search-row select { font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .search-row input { flex: 1; }
+  .search-row input::placeholder { color: var(--ink-faint); }
+
+  .empty-state { padding: 32px 20px; text-align: center; color: var(--ink-faint); font-size: 13px; }
+
+  /* ---------- Roster table ---------- */
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-weight: 600; font-family: var(--font-display); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tbody td { padding: 11px 12px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: middle; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface-2); }
+  .collected-by { max-width: 108px; overflow: hidden; text-overflow: ellipsis; }
+  .collected-by.empty { color: var(--ink-faint); }
+  .child-cell { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 12.5px; flex-shrink: 0; color: #fff; }
+  .a-0 { background: linear-gradient(155deg, var(--brand-green) 0%, var(--brand-green-deep) 100%); }
+  .a-1 { background: linear-gradient(155deg, #55C4EE 0%, var(--brand-blue) 100%); }
+  .a-2 { background: linear-gradient(155deg, #9B7BBB 0%, var(--brand-purple) 100%); }
+  .a-3 { background: linear-gradient(155deg, #FF8981 0%, var(--brand-coral) 100%); }
+  .a-4 { background: linear-gradient(155deg, #FFCE6B 0%, var(--brand-amber) 100%); color: var(--brand-orange-ink); }
+  .child-name { font-weight: 600; color: var(--ink); line-height: 1.2; white-space: nowrap; }
+  .child-group { font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
+  .time-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); }
+  .time-mono.empty { color: var(--ink-faint); }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill-in { background: var(--status-in-bg); color: var(--status-in-fg); }
+  .pill-pending { background: var(--status-pending-bg); color: var(--status-pending-fg); }
+  .pill-out { background: var(--status-out-bg); color: var(--status-out-fg); }
+  .pill-late { background: var(--status-late-bg); color: var(--status-late-fg); }
+  .row-action { font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--brand-blue); background: none; border: none; cursor: pointer; padding: 4px 0; }
+  .row-action:hover { text-decoration: underline; }
+  .row-action.danger { color: var(--brand-coral); }
+
+  /* ---------- Side column ---------- */
+  .side-stack { display: flex; flex-direction: column; gap: 16px; }
+  .form-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .field label { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-display); }
+  .field select, .field input, .field textarea { width: 100%; font-family: var(--font-body); font-size: 13.5px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 9px 10px; background: var(--surface); color: var(--ink); }
+  .field textarea { resize: vertical; min-height: 70px; font-family: var(--font-mono); font-size: 12.5px; }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .submit-row { margin-top: 4px; }
+  .submit-row .btn { width: 100%; justify-content: center; }
+  .field-error { font-size: 12px; color: var(--brand-coral); margin-top: -4px; }
+
+  .who-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .who-btn {
+    appearance: none; cursor: pointer; font-family: var(--font-display); font-size: 13.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.03em; padding: 22px 10px; border-radius: 14px;
+    border: 1.5px solid var(--line-strong); background: var(--surface-2); color: var(--ink);
+    transition: transform 0.08s ease, filter 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .who-btn:hover { background: var(--brand-sky-tint); border-color: var(--brand-blue); }
+  .who-btn:active { transform: translateY(1px); }
+  .who-btn.who-selected { background: var(--brand-orange); border-color: var(--brand-orange); color: #fff; }
+
+  .checklist { max-height: 320px; overflow-y: auto; }
+  .checklist-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
+  .checklist-item:last-child { border-bottom: none; }
+  .checklist-item .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .checklist-item .child-name { font-size: 13px; }
+
+  .pending-list { display: flex; flex-direction: column; }
+  .pending-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .pending-item:last-child { border-bottom: none; }
+  .pending-item .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .pending-item .child-name { font-size: 13px; }
+  .pending-item .since { font-size: 11.5px; color: var(--ink-faint); font-family: var(--font-mono); }
+  .elapsed { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .elapsed.ok { color: var(--status-in-fg); background: var(--status-in-bg); }
+  .elapsed.warn { color: var(--status-pending-fg); background: var(--status-pending-bg); }
+  .elapsed.late { color: var(--status-late-fg); background: var(--status-late-bg); }
+
+  .panel-yellow .panel-head { background: var(--surface-yellow); border-bottom-color: var(--surface-yellow-line); }
+  .note-panel { padding: 16px 20px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.55; background: var(--brand-sky-tint); }
+  .note-panel strong { color: var(--ink); }
+
+  footer { text-align: center; font-size: 12px; color: var(--ink-faint); padding-top: 8px; }
+  footer .tag { display: inline-block; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-family: var(--font-mono); }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(20, 24, 18, 0.45); display: flex;
+    align-items: flex-start; justify-content: center; padding: 6vh 16px; overflow-y: auto; z-index: 50;
+  }
+  .modal-backdrop[hidden] { display: none; }
+  .modal {
+    background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); width: 100%;
+    max-width: 480px; border: 1px solid var(--line);
+  }
+  .modal.modal-wide { max-width: 720px; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { font-family: var(--font-display); font-size: 17px; margin: 0; font-weight: 600; }
+  .modal-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--ink-faint); line-height: 1; padding: 4px; }
+  .modal-close:hover { color: var(--ink); }
+  .modal-body { padding: 18px 20px 20px; max-height: 70vh; overflow-y: auto; }
+
+  .admin-table-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 14px; }
+  .admin-table-wrap table { font-size: 12.5px; }
+  .admin-table-wrap thead th { padding: 8px 10px; }
+  .admin-table-wrap tbody td { padding: 8px 10px; }
+  .archived-row td { opacity: 0.55; }
+  .section-label { font-family: var(--font-display); font-weight: 600; font-size: 13px; margin: 18px 0 4px; color: var(--ink); }
+  .section-hint { font-size: 11.5px; color: var(--ink-faint); margin: 0 0 8px; }
+  details.bulk-add { margin-top: 16px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 14px; }
+  details.bulk-add summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 12.5px; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 999px;
+    font-size: 12.5px; box-shadow: var(--shadow); z-index: 100; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--brand-coral); color: #fff; }
+
+  @media (max-width: 880px) {
+    .grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead-outer">
+  <header class="masthead">
+    <div class="masthead-id">
+      <div class="badge-mark">H</div>
+      <div>
+        <div class="wordmark"><span class="w-howick">Howick</span><span class="w-sub">Pre-Primary &amp; Baby Centre</span></div>
+        <p class="tagline">Aftercare sign-in &amp; sign-out — growing hearts and minds, together</p>
+      </div>
+    </div>
+    <div class="masthead-meta">
+      <div class="date" id="clock">—</div>
+      <a class="btn btn-ghost btn-sm" id="exportBtn" href="/api/attendance/export.csv">Export today's log</a>
+      <button class="btn btn-ghost btn-sm" id="manageBtn">Manage children</button>
+      <button class="btn btn-primary" id="newCheckinBtn">Roll call</button>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+</div>
+<div class="scallop"></div>
+
+<div class="wrap" style="margin-top: 22px;">
+
+  <section class="stats">
+    <div class="stat s-green"><div class="label">Checked in today</div><div class="value" id="statCheckedIn">—</div><div class="sub" id="statCheckedInSub">&nbsp;</div></div>
+    <div class="stat s-purple"><div class="label">Collected today</div><div class="value" id="statCollected">—</div><div class="sub" id="statCollectedSub">&nbsp;</div></div>
+    <div class="stat s-amber"><div class="label">Awaiting pickup</div><div class="value" id="statAwaiting">—</div><div class="sub">&nbsp;</div></div>
+    <div class="stat s-coral"><div class="label">Late collections</div><div class="value" id="statLate">—</div><div class="sub">trailing 7 days</div></div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Today's roster</h2>
+        <span class="count" id="rosterCount">—</span>
+      </div>
+      <div class="search-row">
+        <input type="text" id="rosterSearch" placeholder="Search child or parent…" />
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Child</th>
+              <th>Arrival</th>
+              <th>Collection</th>
+              <th>Collected by</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rosterBody"></tbody>
+        </table>
+        <div class="empty-state" id="rosterEmpty" hidden>No one's been checked in yet today. Use "Roll call" to get started.</div>
+      </div>
+    </section>
+
+    <div class="side-stack">
+      <section class="panel">
+        <div class="panel-head"><h2>Awaiting pickup</h2><span class="count" id="pendingCount">—</span></div>
+        <div class="pending-list" id="pendingList"></div>
+        <div class="empty-state" id="pendingEmpty" hidden>Everyone's been collected. 🎉</div>
+      </section>
+
+      <section class="panel">
+        <div class="note-panel">
+          <strong>How this feeds billing.</strong> Every arrival and collection timestamp recorded here is real data — export a date range as CSV and paste it straight into the billing workbook's Daily Log tab. No manual re-entry.
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span class="tag" id="footerTag">Loading…</span>
+  </footer>
+
+</div>
+
+<!-- Roll call modal -->
+<div class="modal-backdrop" id="checkinModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h2>Roll call — mark today's attendance</h2><button class="modal-close" data-close="checkinModal">&times;</button></div>
+    <div class="search-row" style="border-bottom:none;">
+      <input type="text" id="checkinSearch" placeholder="Search child…" />
+    </div>
+    <div class="checklist" id="checkinList"></div>
+    <div class="empty-state" id="checkinEmpty" hidden>Everyone active is already checked in today.</div>
+  </div>
+</div>
+
+<!-- Collect modal -->
+<div class="modal-backdrop" id="collectModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h2 id="collectModalTitle">Record collection</h2><button class="modal-close" data-close="collectModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="collectAttendanceId" />
+      <p class="section-hint" style="margin-top:-6px;">Collected by:</p>
+      <div class="who-grid">
+        <button type="button" class="who-btn" data-who="Mother">Mother</button>
+        <button type="button" class="who-btn" data-who="Father">Father</button>
+        <button type="button" class="who-btn" data-who="__other__">Other</button>
+      </div>
+      <form id="collectOtherForm" hidden>
+        <div class="field" style="margin-top:14px;">
+          <label for="collectedByInput">Who collected them?</label>
+          <input type="text" id="collectedByInput" list="pickupSuggestions" placeholder="e.g. Grandmother, Aftercare van" autofocus />
+          <datalist id="pickupSuggestions"></datalist>
+        </div>
+        <div class="submit-row"><button type="submit" class="btn btn-primary">Confirm collected</button></div>
+      </form>
+      <div class="field-error" id="collectError" hidden></div>
+    </div>
+  </div>
+</div>
+
+<!-- Manage children modal -->
+<div class="modal-backdrop" id="manageModal" hidden>
+  <div class="modal modal-wide">
+    <div class="modal-head"><h2>Manage children</h2><button class="modal-close" data-close="manageModal">&times;</button></div>
+    <div class="modal-body">
+      <form id="childForm">
+        <input type="hidden" id="childId" />
+        <div class="field-row">
+          <div class="field"><label for="childName">Full name</label><input type="text" id="childName" required /></div>
+          <div class="field"><label for="childGroup">Group</label><input type="text" id="childGroup" placeholder="e.g. Ducklings" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="childParent">Parent / guardian</label><input type="text" id="childParent" /></div>
+          <div class="field"><label for="childPhone">Phone</label><input type="text" id="childPhone" /></div>
+        </div>
+        <div class="field">
+          <label for="childPickup">Authorized pickups (comma-separated)</label>
+          <input type="text" id="childPickup" placeholder="e.g. T. Mokoena, Grandmother, Aftercare van" />
+        </div>
+        <div class="field-error" id="childError" hidden></div>
+        <div class="submit-row" style="display:flex; gap:8px;">
+          <button type="submit" class="btn btn-primary" id="childSubmitBtn" style="flex:1;">Add child</button>
+          <button type="button" class="btn btn-ghost" id="childCancelBtn" hidden>Cancel edit</button>
+        </div>
+      </form>
+
+      <details class="bulk-add">
+        <summary>Bulk add (paste a list)</summary>
+        <p class="section-hint">One child per line — "Full Name" or "Full Name, Group".</p>
+        <textarea id="bulkText" rows="6" placeholder="Amara Mokoena, Ducklings&#10;Jonah van Wyk, Foxes"></textarea>
+        <div class="submit-row"><button type="button" class="btn btn-purple" id="bulkAddBtn">Add all</button></div>
+      </details>
+
+      <div class="section-label">Roster</div>
+      <div class="search-row" style="padding:0 0 8px; border-bottom:none; background:none;">
+        <input type="text" id="adminSearch" placeholder="Search…" />
+      </div>
+      <div class="admin-table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Name</th><th>Group</th><th>Parent</th><th>Pickup notes</th><th></th></tr></thead>
+            <tbody id="adminBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const state = { children: [], today: [], settings: {}, stats: {}, allChildren: [] };
+
+  const el = (id) => document.getElementById(id);
+  const AVATAR_CLASSES = ['a-0', 'a-1', 'a-2', 'a-3', 'a-4'];
+
+  function initials(name) {
+    return (name || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  }
+  function avatarClass(name) {
+    let hash = 0;
+    for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    return AVATAR_CLASSES[hash % AVATAR_CLASSES.length];
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  async function api(path, opts) {
+    const res = await fetch('/api' + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+    if (res.status === 401) { location.href = '/login.html'; throw new Error('Not authenticated'); }
+    if (!res.ok) {
+      let msg = 'Request failed';
+      try { msg = (await res.json()).error || msg; } catch (e) {}
+      throw new Error(msg);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  function showToast(message, isError) {
+    const t = el('toast');
+    t.textContent = message;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { t.className = 'toast'; }, 2600);
+  }
+
+  function openModal(id) { el(id).hidden = false; }
+  function closeModal(id) { el(id).hidden = true; }
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', (e) => { if (e.target === bd) closeModal(bd.id); });
+  });
+
+  // ---------- clock ----------
+  function tickClock() {
+    const now = new Date();
+    el('clock').textContent = now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      + ' · ' + now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+  tickClock();
+  setInterval(tickClock, 15000);
+
+  // ---------- data load ----------
+  async function loadAll() {
+    const [children, today, stats, settings] = await Promise.all([
+      api('/children'),
+      api('/attendance/today'),
+      api('/stats/today'),
+      api('/settings')
+    ]);
+    state.children = children;
+    state.today = today;
+    state.stats = stats;
+    state.settings = settings;
+    render();
+  }
+
+  function render() {
+    renderStats();
+    renderRoster();
+    renderPending();
+    el('footerTag').textContent = 'Live · ' + state.stats.date;
+  }
+
+  function renderStats() {
+    const s = state.stats;
+    el('statCheckedIn').textContent = s.checked_in_today ?? '—';
+    el('statCheckedInSub').textContent = s.avg_stay_minutes != null
+      ? ('avg stay ' + Math.floor(s.avg_stay_minutes / 60) + 'h ' + String(s.avg_stay_minutes % 60).padStart(2, '0') + 'm')
+      : ' ';
+    el('statCollected').textContent = s.collected_today ?? '—';
+    el('statCollectedSub').textContent = s.checked_in_today
+      ? (Math.round(100 * (s.collected_today / s.checked_in_today)) + '% of today')
+      : ' ';
+    el('statAwaiting').textContent = s.awaiting_pickup ?? '—';
+    el('statLate').textContent = s.late_collections_7d ?? '—';
+  }
+
+  function fmtElapsed(ms) {
+    const mins = Math.max(0, Math.round((Date.now() - ms) / 60000));
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return h > 0 ? (h + 'h ' + String(m).padStart(2, '0') + 'm') : (m + 'm');
+  }
+
+  function statusPill(row) {
+    if (row.status === 'collected') return '<span class="pill pill-out">Collected</span>';
+    if (row.status === 'late') return '<span class="pill pill-late">Past cutoff</span>';
+    return '<span class="pill pill-in">Checked in</span>';
+  }
+
+  function renderRoster() {
+    const q = (el('rosterSearch').value || '').toLowerCase().trim();
+    const rows = state.today.filter(r =>
+      !q || r.full_name.toLowerCase().includes(q) || (r.parent_name || '').toLowerCase().includes(q) || (r.group_name || '').toLowerCase().includes(q)
+    );
+    el('rosterCount').textContent = state.today.length + (state.today.length === 1 ? ' child' : ' children') + ' · today';
+    el('rosterEmpty').hidden = state.today.length !== 0;
+
+    el('rosterBody').innerHTML = rows.map(r => `
+      <tr>
+        <td>
+          <div class="child-cell">
+            <div class="avatar ${avatarClass(r.full_name)}">${escapeHtml(initials(r.full_name))}</div>
+            <div>
+              <div class="child-name">${escapeHtml(r.full_name)}</div>
+              <div class="child-group">${escapeHtml([r.group_name, r.parent_name].filter(Boolean).join(' · '))}</div>
+            </div>
+          </div>
+        </td>
+        <td class="time-mono">${r.checked_in_time || '—'}</td>
+        <td class="time-mono ${r.collected_time ? '' : 'empty'}">${r.collected_time || '—'}</td>
+        <td class="collected-by ${r.collected_by ? '' : 'empty'}">${escapeHtml(r.collected_by || '—')}</td>
+        <td>${statusPill(r)}</td>
+        <td>
+          ${r.status === 'collected'
+            ? `<button class="row-action" data-uncollect="${r.id}">Undo</button>`
+            : `<button class="row-action" data-collect="${r.id}" data-name="${escapeHtml(r.full_name)}">Collect</button>`}
+          <button class="row-action danger" data-remove="${r.id}" title="Remove today's check-in">✕</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderPending() {
+    const pending = state.today.filter(r => r.status !== 'collected').sort((a, b) => a.checked_in_at - b.checked_in_at);
+    el('pendingCount').textContent = pending.length + (pending.length === 1 ? ' child' : ' children');
+    el('pendingEmpty').hidden = pending.length !== 0;
+    el('pendingList').innerHTML = pending.map(r => {
+      const cls = r.status === 'late' ? 'late' : (Date.now() - r.checked_in_at > 90 * 60000 ? 'warn' : 'ok');
+      const label = fmtElapsed(r.checked_in_at) + (r.status === 'late' ? ' · late' : '');
+      return `
+        <div class="pending-item">
+          <div class="who">
+            <div class="avatar ${avatarClass(r.full_name)}">${escapeHtml(initials(r.full_name))}</div>
+            <div>
+              <div class="child-name">${escapeHtml(r.full_name)}</div>
+              <div class="since">since ${r.checked_in_time}</div>
+            </div>
+          </div>
+          <button class="row-action" data-collect="${r.id}" data-name="${escapeHtml(r.full_name)}" style="margin-right:6px;">Collect</button>
+          <span class="elapsed ${cls}">${label}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Re-render just the elapsed-time labels every 30s without a full reload.
+  setInterval(() => { if (state.today.length) renderPending(); }, 30000);
+
+  el('rosterSearch').addEventListener('input', renderRoster);
+
+  document.addEventListener('click', async (e) => {
+    const collectId = e.target.dataset && e.target.dataset.collect;
+    const uncollectId = e.target.dataset && e.target.dataset.uncollect;
+    const removeId = e.target.dataset && e.target.dataset.remove;
+
+    if (collectId) {
+      el('collectAttendanceId').value = collectId;
+      el('collectModalTitle').textContent = 'Record collection — ' + e.target.dataset.name;
+      el('collectedByInput').value = '';
+      el('collectError').hidden = true;
+      el('collectOtherForm').hidden = true;
+      document.querySelectorAll('.who-btn').forEach(b => b.classList.remove('who-selected'));
+      const row = state.today.find(r => String(r.id) === String(collectId));
+      const suggestions = new Set();
+      if (row && row.parent_name) suggestions.add(row.parent_name);
+      const child = state.children.find(c => c.id === (row && row.child_id));
+      if (child && child.pickup_notes) child.pickup_notes.split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(s => suggestions.add(s));
+      el('pickupSuggestions').innerHTML = [...suggestions].map(s => `<option value="${escapeHtml(s)}">`).join('');
+      openModal('collectModal');
+    }
+
+    if (uncollectId) {
+      try { await api('/attendance/' + uncollectId + '/uncollect', { method: 'POST' }); await loadAll(); showToast('Collection undone.'); }
+      catch (err) { showToast(err.message, true); }
+    }
+
+    if (removeId) {
+      if (!confirm('Remove this check-in from today’s log? This cannot be undone.')) return;
+      try { await api('/attendance/' + removeId, { method: 'DELETE' }); await loadAll(); showToast('Removed from today’s log.'); }
+      catch (err) { showToast(err.message, true); }
+    }
+  });
+
+  async function submitCollect(collectedBy) {
+    const id = el('collectAttendanceId').value;
+    el('collectError').hidden = true;
+    try {
+      await api('/attendance/' + id + '/collect', { method: 'POST', body: JSON.stringify({ collected_by: collectedBy }) });
+      closeModal('collectModal');
+      await loadAll();
+      showToast('Marked collected.');
+    } catch (err) {
+      el('collectError').textContent = err.message;
+      el('collectError').hidden = false;
+    }
+  }
+
+  document.querySelectorAll('.who-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.who-btn').forEach(b => b.classList.remove('who-selected'));
+      btn.classList.add('who-selected');
+      if (btn.dataset.who === '__other__') {
+        el('collectOtherForm').hidden = false;
+        el('collectedByInput').focus();
+      } else {
+        el('collectOtherForm').hidden = true;
+        submitCollect(btn.dataset.who);
+      }
+    });
+  });
+
+  el('collectOtherForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const collected_by = el('collectedByInput').value.trim();
+    if (!collected_by) {
+      el('collectError').textContent = 'Enter who collected them.';
+      el('collectError').hidden = false;
+      return;
+    }
+    await submitCollect(collected_by);
+  });
+
+  // ---------- new check-in ----------
+  function renderCheckinList() {
+    const q = (el('checkinSearch').value || '').toLowerCase().trim();
+    const checkedInIds = new Set(state.today.map(r => r.child_id));
+    const available = state.children.filter(c => !checkedInIds.has(c.id) &&
+      (!q || c.full_name.toLowerCase().includes(q) || (c.group_name || '').toLowerCase().includes(q)));
+    el('checkinEmpty').hidden = available.length !== 0;
+    el('checkinList').innerHTML = available.map(c => `
+      <div class="checklist-item">
+        <div class="who">
+          <div class="avatar ${avatarClass(c.full_name)}">${escapeHtml(initials(c.full_name))}</div>
+          <div>
+            <div class="child-name">${escapeHtml(c.full_name)}</div>
+            <div class="child-group">${escapeHtml(c.group_name || '')}</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" data-checkin="${c.id}">Check in</button>
+      </div>
+    `).join('');
+  }
+
+  el('newCheckinBtn').addEventListener('click', () => {
+    el('checkinSearch').value = '';
+    renderCheckinList();
+    openModal('checkinModal');
+  });
+  el('checkinSearch').addEventListener('input', renderCheckinList);
+  el('checkinList').addEventListener('click', async (e) => {
+    const id = e.target.dataset && e.target.dataset.checkin;
+    if (!id) return;
+    e.target.disabled = true;
+    try {
+      await api('/attendance/check-in', { method: 'POST', body: JSON.stringify({ child_id: Number(id) }) });
+      await loadAll();
+      renderCheckinList();
+      showToast('Checked in.');
+    } catch (err) {
+      showToast(err.message, true);
+      e.target.disabled = false;
+    }
+  });
+
+  // ---------- manage children ----------
+  async function loadAllChildren() {
+    state.allChildren = await api('/children?all=1');
+    renderAdminTable();
+  }
+
+  function renderAdminTable() {
+    const q = (el('adminSearch').value || '').toLowerCase().trim();
+    const rows = state.allChildren.filter(c => !q || c.full_name.toLowerCase().includes(q) || (c.group_name || '').toLowerCase().includes(q));
+    el('adminBody').innerHTML = rows.map(c => `
+      <tr class="${c.active ? '' : 'archived-row'}">
+        <td>${escapeHtml(c.full_name)}</td>
+        <td>${escapeHtml(c.group_name || '—')}</td>
+        <td>${escapeHtml(c.parent_name || '—')}</td>
+        <td>${escapeHtml(c.pickup_notes || '—')}</td>
+        <td style="white-space:nowrap;">
+          <button class="row-action" data-edit="${c.id}">Edit</button>
+          ${c.active
+            ? `<button class="row-action danger" data-archive="${c.id}">Archive</button>`
+            : `<button class="row-action" data-restore="${c.id}">Restore</button>`}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  el('manageBtn').addEventListener('click', async () => {
+    resetChildForm();
+    openModal('manageModal');
+    try { await loadAllChildren(); } catch (err) { showToast(err.message, true); }
+  });
+  el('adminSearch').addEventListener('input', renderAdminTable);
+
+  function resetChildForm() {
+    el('childId').value = '';
+    el('childForm').reset();
+    el('childError').hidden = true;
+    el('childSubmitBtn').textContent = 'Add child';
+    el('childCancelBtn').hidden = true;
+  }
+  el('childCancelBtn').addEventListener('click', resetChildForm);
+
+  el('adminBody').addEventListener('click', async (e) => {
+    const editId = e.target.dataset && e.target.dataset.edit;
+    const archiveId = e.target.dataset && e.target.dataset.archive;
+    const restoreId = e.target.dataset && e.target.dataset.restore;
+
+    if (editId) {
+      const c = state.allChildren.find(x => String(x.id) === editId);
+      if (!c) return;
+      el('childId').value = c.id;
+      el('childName').value = c.full_name || '';
+      el('childGroup').value = c.group_name || '';
+      el('childParent').value = c.parent_name || '';
+      el('childPhone').value = c.parent_phone || '';
+      el('childPickup').value = c.pickup_notes || '';
+      el('childSubmitBtn').textContent = 'Save changes';
+      el('childCancelBtn').hidden = false;
+      el('childName').focus();
+    }
+    if (archiveId) {
+      try { await api('/children/' + archiveId + '/archive', { method: 'POST' }); await loadAllChildren(); await loadAll(); showToast('Archived.'); }
+      catch (err) { showToast(err.message, true); }
+    }
+    if (restoreId) {
+      try { await api('/children/' + restoreId + '/restore', { method: 'POST' }); await loadAllChildren(); await loadAll(); showToast('Restored.'); }
+      catch (err) { showToast(err.message, true); }
+    }
+  });
+
+  el('childForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = el('childId').value;
+    const payload = {
+      full_name: el('childName').value.trim(),
+      group_name: el('childGroup').value.trim() || null,
+      parent_name: el('childParent').value.trim() || null,
+      parent_phone: el('childPhone').value.trim() || null,
+      pickup_notes: el('childPickup').value.trim() || null
+    };
+    try {
+      if (id) await api('/children/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+      else await api('/children', { method: 'POST', body: JSON.stringify(payload) });
+      resetChildForm();
+      await loadAllChildren();
+      await loadAll();
+      showToast(id ? 'Child updated.' : 'Child added.');
+    } catch (err) {
+      el('childError').textContent = err.message;
+      el('childError').hidden = false;
+    }
+  });
+
+  el('bulkAddBtn').addEventListener('click', async () => {
+    const lines = el('bulkText').value.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    let added = 0, failed = 0;
+    for (const line of lines) {
+      const [name, group] = line.split(',').map(s => s && s.trim());
+      if (!name) { failed++; continue; }
+      try {
+        await api('/children', { method: 'POST', body: JSON.stringify({ full_name: name, group_name: group || null }) });
+        added++;
+      } catch (err) { failed++; }
+    }
+    el('bulkText').value = '';
+    await loadAllChildren();
+    await loadAll();
+    showToast(`Added ${added} child${added === 1 ? '' : 'ren'}.${failed ? ' ' + failed + ' failed.' : ''}`, failed > 0 && added === 0);
+  });
+
+  // ---------- export / logout ----------
+  el('exportBtn').addEventListener('click', () => {
+    const today = new Date();
+    const iso = today.toISOString().slice(0, 10);
+    el('exportBtn').href = '/api/attendance/export.csv?from=' + iso + '&to=' + iso;
+  });
+
+  el('logoutBtn').addEventListener('click', async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    location.href = '/login.html';
+  });
+
+  // ---------- init ----------
+  loadAll().catch(err => showToast(err.message, true));
+  setInterval(() => loadAll().catch(() => {}), 60000);
+})();
+</script>
+</body>
+</html>

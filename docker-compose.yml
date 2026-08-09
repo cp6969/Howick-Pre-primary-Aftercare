@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    container_name: howick-aftercare-tracker
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    ports:
+      # Reach the app directly on the LAN at http://<server-ip>:8089
+      # Put a reverse proxy (Cloudflare Tunnel, nginx, etc.) in front of this
+      # for a public URL — see the Shipments Tracker repo's compose file for
+      # a worked example if you want the same cloudflared setup here too.
+      - "8089:3000"

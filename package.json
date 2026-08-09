@@ -1,0 +1,16 @@
+{
+  "name": "howick-aftercare-tracker",
+  "version": "1.0.0",
+  "description": "Aftercare sign-in/sign-out tracker for Howick Pre-Primary & Baby Centre.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0"
+  }
+}
