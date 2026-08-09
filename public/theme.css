@@ -1,0 +1,90 @@
+/* Shared design tokens for every page (index, settings, login) -- one file
+   so the palette can never drift out of sync between pages the way three
+   separate copies of the same :root block eventually would.
+
+   Colors are sourced directly from the real howickpreprimary.co.za site:
+   the green/blue are pixel-sampled from their actual logo, the rest (amber,
+   orange, coral, purple, pink, sky) come from their own page CSS. Neutrals
+   are a clean white/cool-grey scale -- the old cream/beige (#F7F5EC etc.)
+   is gone. */
+
+:root {
+  --paper: #F8F9F6;
+  --surface: #FFFFFF;
+  --surface-2: #F1F4EE;
+  --surface-yellow: #FFF6DA;
+  --surface-yellow-line: #FBE6A0;
+
+  --ink: #232C20;
+  --ink-soft: #5B6355;
+  --ink-faint: #8C9385;
+  --line: #E6E9E1;
+  --line-strong: #D5D9CC;
+
+  --brand-green: #52B23A;
+  --brand-green-deep: #2E8A28;
+  --brand-blue: #1A5FB4;
+  --brand-sky-tint: #E3F6FB;
+  --brand-sky: #3FBEDE;
+  --brand-amber: #FFC14F;
+  --brand-orange: #FF9900;
+  --brand-orange-ink: #7A3D00;
+  --brand-purple: #7A5299;
+  --brand-purple-ink: #FFFFFF;
+  --brand-coral: #FF5A50;
+  --brand-coral-tint: #FFEAE7;
+  --brand-pink: #F0559A;
+  --brand-pink-tint: #FDE6F0;
+
+  --status-in-fg: #1C7A45;
+  --status-in-bg: #E1F3E3;
+  --status-pending-fg: #8A5E00;
+  --status-pending-bg: #FFF0C7;
+  --status-out-fg: #62675A;
+  --status-out-bg: #EAEDE5;
+  --status-late-fg: #C23B32;
+  --status-late-bg: #FFE7E4;
+
+  --shadow: 0 1px 2px rgba(35, 44, 32, 0.05), 0 10px 26px -14px rgba(35, 44, 32, 0.18);
+
+  --font-display: 'Jost', ui-sans-serif, 'Segoe UI', sans-serif;
+  --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
+    --surface-yellow: #332C12; --surface-yellow-line: #4A3F17;
+    --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+    --line: #333A2D; --line-strong: #414938;
+    --brand-green: #74D659; --brand-green-deep: #3FCB93; --brand-blue: #5BA8F5;
+    --brand-sky-tint: #163038; --brand-sky: #5BC9E8;
+    --brand-amber: #FFCC66; --brand-orange: #FFA51F; --brand-orange-ink: #241200;
+    --brand-purple: #B08FD1; --brand-purple-ink: #221830;
+    --brand-coral: #FF8079; --brand-coral-tint: #3A1E1B;
+    --brand-pink: #FF8FC4; --brand-pink-tint: #3A1E30;
+    --status-in-fg: #7FDD9C; --status-in-bg: #1D3826;
+    --status-pending-fg: #F0C15C; --status-pending-bg: #3A2E0C;
+    --status-out-fg: #B4B9A8; --status-out-bg: #282E23;
+    --status-late-fg: #FF9B92; --status-late-bg: #3A211E;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
+  --surface-yellow: #332C12; --surface-yellow-line: #4A3F17;
+  --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+  --line: #333A2D; --line-strong: #414938;
+  --brand-green: #74D659; --brand-green-deep: #3FCB93; --brand-blue: #5BA8F5;
+  --brand-sky-tint: #163038; --brand-sky: #5BC9E8;
+  --brand-amber: #FFCC66; --brand-orange: #FFA51F; --brand-orange-ink: #241200;
+  --brand-purple: #B08FD1; --brand-purple-ink: #221830;
+  --brand-coral: #FF8079; --brand-coral-tint: #3A1E1B;
+  --brand-pink: #FF8FC4; --brand-pink-tint: #3A1E30;
+  --status-in-fg: #7FDD9C; --status-in-bg: #1D3826;
+  --status-pending-fg: #F0C15C; --status-pending-bg: #3A2E0C;
+  --status-out-fg: #B4B9A8; --status-out-bg: #282E23;
+  --status-late-fg: #FF9B92; --status-late-bg: #3A211E;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
+}

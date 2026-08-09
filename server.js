@@ -54,6 +54,19 @@ app.get('/login.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
+// Nothing sensitive in any of these -- font data and CSS/JS color tokens,
+// not attendance/child data -- and the login page needs them to actually
+// render styled before a session exists. Serving the whole public/ dir here
+// instead would also expose index.html/settings.html unauthenticated, so
+// this stays an explicit, narrow allowlist rather than moving the general
+// express.static mount above the auth gate.
+const PUBLIC_ASSETS = ['fonts.css', 'theme.css', 'group-colors.js'];
+for (const file of PUBLIC_ASSETS) {
+  app.get('/' + file, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', file));
+  });
+}
+
 app.post('/login', async (req, res) => {
   const { username, password } = req.body || {};
   const usernameOk = username === process.env.APP_USERNAME;

@@ -5,80 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Howick Pre-Primary — Aftercare Tracker</title>
 <link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/theme.css">
 <style>
-  :root {
-    --paper: #F7F5EC;
-    --surface: #FFFFFF;
-    --surface-2: #F1EFE3;
-    --surface-yellow: #FFF7D6;
-    --surface-yellow-line: #F5E8A6;
-    --ink: #20281F;
-    --ink-soft: #5C6456;
-    --ink-faint: #8B9285;
-    --line: #E6E1D0;
-    --line-strong: #D5CEB4;
-
-    --brand-green: #3FA637;
-    --brand-green-deep: #12724F;
-    --brand-blue: #0287D6;
-    --brand-sky-tint: #E4F7FB;
-    --brand-amber: #F0A400;
-    --brand-orange: #FF9900;
-    --brand-orange-ink: #7A3D00;
-    --brand-purple: #785299;
-    --brand-purple-ink: #FFFFFF;
-    --brand-coral: #E9463F;
-    --brand-coral-tint: #FDE7E5;
-
-    --status-in-fg: #1C7A45;
-    --status-in-bg: #E1F3E3;
-    --status-pending-fg: #8A5E00;
-    --status-pending-bg: #FFF0C7;
-    --status-out-fg: #62675A;
-    --status-out-bg: #EDEAD9;
-    --status-late-fg: #C23B32;
-    --status-late-bg: #FBE1DE;
-
-    --shadow: 0 1px 2px rgba(32, 40, 31, 0.06), 0 10px 26px -14px rgba(32, 40, 31, 0.22);
-
-    --font-display: 'Jost', ui-sans-serif, 'Segoe UI', sans-serif;
-    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
-      --surface-yellow: #332C12; --surface-yellow-line: #4A3F17;
-      --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
-      --line: #333A2D; --line-strong: #414938;
-      --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
-      --brand-sky-tint: #163038; --brand-amber: #F5BC3E; --brand-orange: #FFA51F;
-      --brand-orange-ink: #241200; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
-      --brand-coral: #FF7A72; --brand-coral-tint: #3A1E1B;
-      --status-in-fg: #7FDD9C; --status-in-bg: #1D3826;
-      --status-pending-fg: #F0C15C; --status-pending-bg: #3A2E0C;
-      --status-out-fg: #B4B9A8; --status-out-bg: #282E23;
-      --status-late-fg: #FF9B92; --status-late-bg: #3A211E;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
-    }
-  }
-  :root[data-theme="dark"] {
-    --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
-    --surface-yellow: #332C12; --surface-yellow-line: #4A3F17;
-    --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
-    --line: #333A2D; --line-strong: #414938;
-    --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
-    --brand-sky-tint: #163038; --brand-amber: #F5BC3E; --brand-orange: #FFA51F;
-    --brand-orange-ink: #241200; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
-    --brand-coral: #FF7A72; --brand-coral-tint: #3A1E1B;
-    --status-in-fg: #7FDD9C; --status-in-bg: #1D3826;
-    --status-pending-fg: #F0C15C; --status-pending-bg: #3A2E0C;
-    --status-out-fg: #B4B9A8; --status-out-bg: #282E23;
-    --status-late-fg: #FF9B92; --status-late-bg: #3A211E;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
-  }
-
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
@@ -177,6 +105,7 @@
   .a-4 { background: linear-gradient(155deg, #FFCE6B 0%, var(--brand-amber) 100%); color: var(--brand-orange-ink); }
   .child-name { font-weight: 600; color: var(--ink); line-height: 1.2; white-space: nowrap; }
   .child-group { font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
+  .group-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
   .time-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); }
   .time-mono.empty { color: var(--ink-faint); }
   .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
@@ -395,6 +324,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="/group-colors.js"></script>
 <script>
 (function () {
   'use strict';
@@ -411,6 +341,19 @@
     let hash = 0;
     for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
     return AVATAR_CLASSES[hash % AVATAR_CLASSES.length];
+  }
+  // A child in a known group always gets that group's own color (so a
+  // teacher can eyeball group membership at a glance across the whole
+  // roster) -- inline style overrides the hash-based gradient class, which
+  // is only ever the fallback for a child with no group assigned yet.
+  function avatarStyle(group) {
+    const c = group && window.GROUP_COLORS && window.GROUP_COLORS[group];
+    return c ? `background:${c.solid};` : '';
+  }
+  function groupBadgeHtml(group) {
+    if (!group) return '';
+    const c = (window.GROUP_COLORS && window.GROUP_COLORS[group]) || window.GROUP_COLOR_FALLBACK;
+    return `<span class="group-dot" style="background:${c.solid}"></span>${escapeHtml(group)}`;
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -539,10 +482,10 @@
       <tr>
         <td>
           <div class="child-cell">
-            <div class="avatar ${avatarClass(r.full_name)}">${escapeHtml(initials(r.full_name))}</div>
+            <div class="avatar ${avatarClass(r.full_name)}" style="${avatarStyle(r.group_name)}">${escapeHtml(initials(r.full_name))}</div>
             <div>
               <div class="child-name">${escapeHtml(r.full_name)}</div>
-              <div class="child-group">${escapeHtml([r.group_name, r.parent_name].filter(Boolean).join(' · '))}</div>
+              <div class="child-group">${[groupBadgeHtml(r.group_name), r.parent_name ? escapeHtml(r.parent_name) : ''].filter(Boolean).join(' &middot; ')}</div>
             </div>
           </div>
         </td>
@@ -570,7 +513,7 @@
       return `
         <div class="pending-item">
           <div class="who">
-            <div class="avatar ${avatarClass(r.full_name)}">${escapeHtml(initials(r.full_name))}</div>
+            <div class="avatar ${avatarClass(r.full_name)}" style="${avatarStyle(r.group_name)}">${escapeHtml(initials(r.full_name))}</div>
             <div>
               <div class="child-name">${escapeHtml(r.full_name)}</div>
               <div class="since">since ${r.checked_in_time}</div>
@@ -670,10 +613,10 @@
     el('checkinList').innerHTML = available.map(c => `
       <div class="checklist-item">
         <div class="who">
-          <div class="avatar ${avatarClass(c.full_name)}">${escapeHtml(initials(c.full_name))}</div>
+          <div class="avatar ${avatarClass(c.full_name)}" style="${avatarStyle(c.group_name)}">${escapeHtml(initials(c.full_name))}</div>
           <div>
             <div class="child-name">${escapeHtml(c.full_name)}</div>
-            <div class="child-group">${escapeHtml(c.group_name || '')}</div>
+            <div class="child-group">${groupBadgeHtml(c.group_name)}</div>
           </div>
         </div>
         <button class="btn btn-primary btn-sm" data-checkin="${c.id}">Check in</button>

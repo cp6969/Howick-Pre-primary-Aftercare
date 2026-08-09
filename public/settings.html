@@ -5,54 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Settings — Howick Pre-Primary Aftercare</title>
 <link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/theme.css">
 <style>
-  :root {
-    --paper: #F7F5EC;
-    --surface: #FFFFFF;
-    --surface-2: #F1EFE3;
-    --ink: #20281F;
-    --ink-soft: #5C6456;
-    --ink-faint: #8B9285;
-    --line: #E6E1D0;
-    --line-strong: #D5CEB4;
-
-    --brand-green: #3FA637;
-    --brand-green-deep: #12724F;
-    --brand-blue: #0287D6;
-    --brand-sky-tint: #E4F7FB;
-    --brand-orange: #FF9900;
-    --brand-purple: #785299;
-    --brand-purple-ink: #FFFFFF;
-    --brand-coral: #E9463F;
-
-    --shadow: 0 1px 2px rgba(32, 40, 31, 0.06), 0 10px 26px -14px rgba(32, 40, 31, 0.22);
-
-    --font-display: 'Jost', ui-sans-serif, 'Segoe UI', sans-serif;
-    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
-      --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
-      --line: #333A2D; --line-strong: #414938;
-      --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
-      --brand-sky-tint: #163038; --brand-orange: #FFA51F; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
-      --brand-coral: #FF7A72;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
-    }
-  }
-  :root[data-theme="dark"] {
-    --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
-    --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
-    --line: #333A2D; --line-strong: #414938;
-    --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
-    --brand-sky-tint: #163038; --brand-orange: #FFA51F; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
-    --brand-coral: #FF7A72;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
-  }
-
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
@@ -126,7 +80,7 @@
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: var(--surface-2); }
   .archived-row td { opacity: 0.55; }
-  .group-chip { display: inline-block; font-size: 11px; font-weight: 600; font-family: var(--font-display); padding: 2px 9px; border-radius: 999px; background: var(--brand-sky-tint); color: var(--brand-blue); white-space: nowrap; }
+  .group-chip { display: inline-block; font-size: 11px; font-weight: 600; font-family: var(--font-display); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
   .group-chip.empty { background: var(--surface-2); color: var(--ink-faint); }
   .row-action { font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--brand-blue); background: none; border: none; cursor: pointer; padding: 4px 0; margin-right: 10px; }
   .row-action:hover { text-decoration: underline; }
@@ -291,12 +245,19 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="/group-colors.js"></script>
 <script>
 (function () {
   'use strict';
 
   const state = { children: [], groups: [] };
   const el = (id) => document.getElementById(id);
+
+  function groupChipHtml(group) {
+    if (!group) return '<span class="group-chip empty">—</span>';
+    const c = (window.GROUP_COLORS && window.GROUP_COLORS[group]) || window.GROUP_COLOR_FALLBACK;
+    return `<span class="group-chip" style="background:${c.tint};color:${c.text}">${escapeHtml(group)}</span>`;
+  }
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -354,7 +315,7 @@
     el('adminBody').innerHTML = rows.map(c => `
       <tr class="${c.active ? '' : 'archived-row'}">
         <td>${escapeHtml(c.full_name)}</td>
-        <td>${c.group_name ? `<span class="group-chip">${escapeHtml(c.group_name)}</span>` : '<span class="group-chip empty">—</span>'}</td>
+        <td>${groupChipHtml(c.group_name)}</td>
         <td>${escapeHtml(c.parent_name || '—')}</td>
         <td>${escapeHtml(c.parent_phone || '—')}</td>
         <td>${escapeHtml(c.pickup_notes || '—')}</td>
