@@ -289,7 +289,7 @@
     <div class="masthead-meta">
       <div class="date" id="clock">—</div>
       <a class="btn btn-ghost btn-sm" id="exportBtn" href="/api/attendance/export.csv">Export today's log</a>
-      <button class="btn btn-ghost btn-sm" id="manageBtn">Manage children</button>
+      <a class="btn btn-ghost btn-sm" href="/settings.html">Settings</a>
       <button class="btn btn-primary" id="newCheckinBtn">Roll call</button>
       <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
     </div>
@@ -391,62 +391,13 @@
   </div>
 </div>
 
-<!-- Manage children modal -->
-<div class="modal-backdrop" id="manageModal" hidden>
-  <div class="modal modal-wide">
-    <div class="modal-head"><h2>Manage children</h2><button class="modal-close" data-close="manageModal">&times;</button></div>
-    <div class="modal-body">
-      <form id="childForm">
-        <input type="hidden" id="childId" />
-        <div class="field-row">
-          <div class="field"><label for="childName">Full name</label><input type="text" id="childName" required /></div>
-          <div class="field"><label for="childGroup">Group</label><input type="text" id="childGroup" placeholder="e.g. Ducklings" /></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label for="childParent">Parent / guardian</label><input type="text" id="childParent" /></div>
-          <div class="field"><label for="childPhone">Phone</label><input type="text" id="childPhone" /></div>
-        </div>
-        <div class="field">
-          <label for="childPickup">Authorized pickups (comma-separated)</label>
-          <input type="text" id="childPickup" placeholder="e.g. T. Mokoena, Grandmother, Aftercare van" />
-        </div>
-        <div class="field-error" id="childError" hidden></div>
-        <div class="submit-row" style="display:flex; gap:8px;">
-          <button type="submit" class="btn btn-primary" id="childSubmitBtn" style="flex:1;">Add child</button>
-          <button type="button" class="btn btn-ghost" id="childCancelBtn" hidden>Cancel edit</button>
-        </div>
-      </form>
-
-      <details class="bulk-add">
-        <summary>Bulk add (paste a list)</summary>
-        <p class="section-hint">One child per line — "Full Name" or "Full Name, Group".</p>
-        <textarea id="bulkText" rows="6" placeholder="Amara Mokoena, Ducklings&#10;Jonah van Wyk, Foxes"></textarea>
-        <div class="submit-row"><button type="button" class="btn btn-purple" id="bulkAddBtn">Add all</button></div>
-      </details>
-
-      <div class="section-label">Roster</div>
-      <div class="search-row" style="padding:0 0 8px; border-bottom:none; background:none;">
-        <input type="text" id="adminSearch" placeholder="Search…" />
-      </div>
-      <div class="admin-table-wrap">
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Name</th><th>Group</th><th>Parent</th><th>Pickup notes</th><th></th></tr></thead>
-            <tbody id="adminBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
 (function () {
   'use strict';
 
-  const state = { children: [], today: [], settings: {}, stats: {}, allChildren: [] };
+  const state = { children: [], today: [], settings: {}, stats: {} };
 
   const el = (id) => document.getElementById(id);
   const AVATAR_CLASSES = ['a-0', 'a-1', 'a-2', 'a-3', 'a-4'];
@@ -722,116 +673,6 @@
       showToast(err.message, true);
       e.target.disabled = false;
     }
-  });
-
-  // ---------- manage children ----------
-  async function loadAllChildren() {
-    state.allChildren = await api('/children?all=1');
-    renderAdminTable();
-  }
-
-  function renderAdminTable() {
-    const q = (el('adminSearch').value || '').toLowerCase().trim();
-    const rows = state.allChildren.filter(c => !q || c.full_name.toLowerCase().includes(q) || (c.group_name || '').toLowerCase().includes(q));
-    el('adminBody').innerHTML = rows.map(c => `
-      <tr class="${c.active ? '' : 'archived-row'}">
-        <td>${escapeHtml(c.full_name)}</td>
-        <td>${escapeHtml(c.group_name || '—')}</td>
-        <td>${escapeHtml(c.parent_name || '—')}</td>
-        <td>${escapeHtml(c.pickup_notes || '—')}</td>
-        <td style="white-space:nowrap;">
-          <button class="row-action" data-edit="${c.id}">Edit</button>
-          ${c.active
-            ? `<button class="row-action danger" data-archive="${c.id}">Archive</button>`
-            : `<button class="row-action" data-restore="${c.id}">Restore</button>`}
-        </td>
-      </tr>
-    `).join('');
-  }
-
-  el('manageBtn').addEventListener('click', async () => {
-    resetChildForm();
-    openModal('manageModal');
-    try { await loadAllChildren(); } catch (err) { showToast(err.message, true); }
-  });
-  el('adminSearch').addEventListener('input', renderAdminTable);
-
-  function resetChildForm() {
-    el('childId').value = '';
-    el('childForm').reset();
-    el('childError').hidden = true;
-    el('childSubmitBtn').textContent = 'Add child';
-    el('childCancelBtn').hidden = true;
-  }
-  el('childCancelBtn').addEventListener('click', resetChildForm);
-
-  el('adminBody').addEventListener('click', async (e) => {
-    const editId = e.target.dataset && e.target.dataset.edit;
-    const archiveId = e.target.dataset && e.target.dataset.archive;
-    const restoreId = e.target.dataset && e.target.dataset.restore;
-
-    if (editId) {
-      const c = state.allChildren.find(x => String(x.id) === editId);
-      if (!c) return;
-      el('childId').value = c.id;
-      el('childName').value = c.full_name || '';
-      el('childGroup').value = c.group_name || '';
-      el('childParent').value = c.parent_name || '';
-      el('childPhone').value = c.parent_phone || '';
-      el('childPickup').value = c.pickup_notes || '';
-      el('childSubmitBtn').textContent = 'Save changes';
-      el('childCancelBtn').hidden = false;
-      el('childName').focus();
-    }
-    if (archiveId) {
-      try { await api('/children/' + archiveId + '/archive', { method: 'POST' }); await loadAllChildren(); await loadAll(); showToast('Archived.'); }
-      catch (err) { showToast(err.message, true); }
-    }
-    if (restoreId) {
-      try { await api('/children/' + restoreId + '/restore', { method: 'POST' }); await loadAllChildren(); await loadAll(); showToast('Restored.'); }
-      catch (err) { showToast(err.message, true); }
-    }
-  });
-
-  el('childForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = el('childId').value;
-    const payload = {
-      full_name: el('childName').value.trim(),
-      group_name: el('childGroup').value.trim() || null,
-      parent_name: el('childParent').value.trim() || null,
-      parent_phone: el('childPhone').value.trim() || null,
-      pickup_notes: el('childPickup').value.trim() || null
-    };
-    try {
-      if (id) await api('/children/' + id, { method: 'PUT', body: JSON.stringify(payload) });
-      else await api('/children', { method: 'POST', body: JSON.stringify(payload) });
-      resetChildForm();
-      await loadAllChildren();
-      await loadAll();
-      showToast(id ? 'Child updated.' : 'Child added.');
-    } catch (err) {
-      el('childError').textContent = err.message;
-      el('childError').hidden = false;
-    }
-  });
-
-  el('bulkAddBtn').addEventListener('click', async () => {
-    const lines = el('bulkText').value.split('\n').map(l => l.trim()).filter(Boolean);
-    if (!lines.length) return;
-    let added = 0, failed = 0;
-    for (const line of lines) {
-      const [name, group] = line.split(',').map(s => s && s.trim());
-      if (!name) { failed++; continue; }
-      try {
-        await api('/children', { method: 'POST', body: JSON.stringify({ full_name: name, group_name: group || null }) });
-        added++;
-      } catch (err) { failed++; }
-    }
-    el('bulkText').value = '';
-    await loadAllChildren();
-    await loadAll();
-    showToast(`Added ${added} child${added === 1 ? '' : 'ren'}.${failed ? ' ' + failed + ' failed.' : ''}`, failed > 0 && added === 0);
   });
 
   // ---------- export / logout ----------

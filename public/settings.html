@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings — Howick Pre-Primary Aftercare</title>
+<link rel="stylesheet" href="/fonts.css">
+<style>
+  :root {
+    --paper: #F7F5EC;
+    --surface: #FFFFFF;
+    --surface-2: #F1EFE3;
+    --ink: #20281F;
+    --ink-soft: #5C6456;
+    --ink-faint: #8B9285;
+    --line: #E6E1D0;
+    --line-strong: #D5CEB4;
+
+    --brand-green: #3FA637;
+    --brand-green-deep: #12724F;
+    --brand-blue: #0287D6;
+    --brand-sky-tint: #E4F7FB;
+    --brand-orange: #FF9900;
+    --brand-purple: #785299;
+    --brand-purple-ink: #FFFFFF;
+    --brand-coral: #E9463F;
+
+    --shadow: 0 1px 2px rgba(32, 40, 31, 0.06), 0 10px 26px -14px rgba(32, 40, 31, 0.22);
+
+    --font-display: 'Jost', ui-sans-serif, 'Segoe UI', sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
+      --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+      --line: #333A2D; --line-strong: #414938;
+      --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
+      --brand-sky-tint: #163038; --brand-orange: #FFA51F; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
+      --brand-coral: #FF7A72;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #171C15; --surface: #20261D; --surface-2: #262C21;
+    --ink: #ECEDE3; --ink-soft: #AEB3A2; --ink-faint: #767C6C;
+    --line: #333A2D; --line-strong: #414938;
+    --brand-green: #6FCF64; --brand-green-deep: #3FCB93; --brand-blue: #4FB8F0;
+    --brand-sky-tint: #163038; --brand-orange: #FFA51F; --brand-purple: #B08FD1; --brand-purple-ink: #221830;
+    --brand-coral: #FF7A72;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.65);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+  body { padding: 0 0 56px; min-height: 100vh; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px) 0; display: flex; flex-direction: column; gap: 22px; }
+
+  .masthead-outer { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .masthead {
+    max-width: 1080px; margin: 0 auto; padding: 20px clamp(16px, 4vw, 48px) 22px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  }
+  .masthead-id { display: flex; align-items: center; gap: 14px; }
+  .badge-mark {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(155deg, var(--brand-green) 0%, var(--brand-green-deep) 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 20px; flex-shrink: 0; box-shadow: var(--shadow);
+  }
+  .wordmark { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 3vw, 25px); line-height: 1.05; letter-spacing: -0.01em; }
+  .wordmark .w-howick { color: var(--brand-green); }
+  .wordmark .w-sub { display: block; font-family: var(--font-display); font-weight: 500; font-size: 13px; color: var(--brand-blue); letter-spacing: 0.01em; margin-top: 1px; }
+  .masthead-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .scallop {
+    height: 14px; background-color: var(--paper);
+    background-image: radial-gradient(circle at 11px 0, var(--surface) 11px, transparent 12px);
+    background-size: 22px 14px; background-repeat: repeat-x; background-position: center top;
+  }
+
+  .btn {
+    appearance: none; border: none; cursor: pointer; font-family: var(--font-display);
+    font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    border-radius: 999px; padding: 11px 20px; display: inline-flex; align-items: center; gap: 8px;
+    transition: transform 0.08s ease, filter 0.15s ease; text-decoration: none;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+  .btn-primary { background: var(--brand-orange); color: #fff; box-shadow: 0 6px 16px -8px rgba(255, 153, 0, 0.7); }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-ghost { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line-strong); }
+  .btn-ghost:hover { background: var(--surface); color: var(--ink); }
+  .btn-purple { background: var(--brand-purple); color: var(--brand-purple-ink); }
+  .btn-purple:hover { filter: brightness(1.08); }
+  .btn-sm { padding: 7px 14px; font-size: 11.5px; }
+  .btn[disabled] { opacity: 0.5; cursor: default; pointer-events: none; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); gap: 12px; flex-wrap: wrap; }
+  .panel-head h2 { font-family: var(--font-display); font-size: 18px; margin: 0; font-weight: 600; }
+  .panel-head p { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+  .panel-body { padding: 18px 20px 20px; }
+
+  .field label { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-display); }
+  .field select, .field input, .field textarea { width: 100%; font-family: var(--font-body); font-size: 13.5px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 9px 10px; background: var(--surface); color: var(--ink); }
+  .field textarea { resize: vertical; min-height: 70px; font-family: var(--font-mono); font-size: 12.5px; }
+  .field-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .field-row .field { flex: 1; min-width: 180px; }
+  .form-grid { display: flex; flex-direction: column; gap: 12px; }
+  .submit-row .btn { justify-content: center; }
+  .field-error { font-size: 12px; color: var(--brand-coral); margin-top: -4px; }
+  .field-hint { font-size: 11.5px; color: var(--ink-faint); margin: -6px 0 2px; }
+
+  .search-row { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .search-row input, .search-row select { font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .search-row input { flex: 1; min-width: 140px; }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-weight: 600; font-family: var(--font-display); padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface-2); }
+  .archived-row td { opacity: 0.55; }
+  .group-chip { display: inline-block; font-size: 11px; font-weight: 600; font-family: var(--font-display); padding: 2px 9px; border-radius: 999px; background: var(--brand-sky-tint); color: var(--brand-blue); white-space: nowrap; }
+  .group-chip.empty { background: var(--surface-2); color: var(--ink-faint); }
+  .row-action { font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--brand-blue); background: none; border: none; cursor: pointer; padding: 4px 0; margin-right: 10px; }
+  .row-action:hover { text-decoration: underline; }
+  .row-action.danger { color: var(--brand-coral); }
+  .empty-state { padding: 28px 20px; text-align: center; color: var(--ink-faint); font-size: 13px; }
+
+  details.bulk-add { margin-top: 4px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 14px; }
+  details.bulk-add summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 12.5px; }
+  .section-hint { font-size: 11.5px; color: var(--ink-faint); margin: 8px 0; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 999px;
+    font-size: 12.5px; box-shadow: var(--shadow); z-index: 100; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--brand-coral); color: #fff; }
+
+  .settings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 720px) { .settings-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+
+<div class="masthead-outer">
+  <header class="masthead">
+    <div class="masthead-id">
+      <div class="badge-mark">H</div>
+      <div>
+        <div class="wordmark"><span class="w-howick">Howick</span><span class="w-sub">Settings</span></div>
+      </div>
+    </div>
+    <div class="masthead-meta">
+      <a class="btn btn-ghost btn-sm" href="/index.html">&larr; Back to tracker</a>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+</div>
+<div class="scallop"></div>
+
+<div class="wrap" style="margin-top: 22px;">
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Children roster</h2>
+        <p>Add, edit and archive the school roster. Archiving keeps a child's attendance history intact — use it instead of deleting.</p>
+      </div>
+      <span class="count" id="rosterCount" style="font-size:12.5px; color:var(--ink-faint); font-family:var(--font-mono);">—</span>
+    </div>
+    <div class="panel-body">
+      <form id="childForm" class="form-grid">
+        <input type="hidden" id="childId" />
+        <div class="field-row">
+          <div class="field"><label for="childName">Full name</label><input type="text" id="childName" required /></div>
+          <div class="field">
+            <label for="childGroup">Group</label>
+            <select id="childGroup">
+              <option value="">— No group —</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="childParent">Parent / guardian</label><input type="text" id="childParent" /></div>
+          <div class="field"><label for="childPhone">Phone</label><input type="text" id="childPhone" /></div>
+        </div>
+        <div class="field">
+          <label for="childPickup">Authorized pickups (comma-separated)</label>
+          <input type="text" id="childPickup" placeholder="e.g. T. Mokoena, Grandmother, Aftercare van" />
+        </div>
+        <div class="field-error" id="childError" hidden></div>
+        <div class="submit-row" style="display:flex; gap:8px;">
+          <button type="submit" class="btn btn-primary" id="childSubmitBtn" style="flex:1;">Add child</button>
+          <button type="button" class="btn btn-ghost" id="childCancelBtn" hidden>Cancel edit</button>
+        </div>
+      </form>
+
+      <details class="bulk-add" style="margin-top:16px;">
+        <summary>Bulk add (paste a list)</summary>
+        <p class="section-hint">One child per line — "Full Name" or "Full Name, Group". Group must match one of the school's group names exactly (see below) or it's left blank.</p>
+        <textarea id="bulkText" rows="6" placeholder="Amara Mokoena, Baby Monkeys&#10;Jonah van Wyk, Busy Bees"></textarea>
+        <p class="section-hint" id="bulkGroupList"></p>
+        <div class="submit-row"><button type="button" class="btn btn-purple" id="bulkAddBtn">Add all</button></div>
+      </details>
+
+      <div class="search-row" style="padding:16px 0 8px; border-bottom:none; background:none;">
+        <input type="text" id="adminSearch" placeholder="Search name or group…" />
+        <select id="adminGroupFilter">
+          <option value="">All groups</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); white-space:nowrap;">
+          <input type="checkbox" id="showArchived" style="width:auto;" /> Show archived
+        </label>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Name</th><th>Group</th><th>Parent</th><th>Phone</th><th>Pickup notes</th><th></th></tr></thead>
+          <tbody id="adminBody"></tbody>
+        </table>
+        <div class="empty-state" id="adminEmpty" hidden>No children match.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Aftercare settings</h2>
+        <p>Used for the "late collection" flag on the tracker and the billing workbook.</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <form id="settingsForm" class="form-grid">
+        <div class="settings-grid">
+          <div class="field"><label for="cutoffTime">Collection cutoff</label><input type="time" id="cutoffTime" /></div>
+          <div class="field"><label for="hourlyRate">Hourly rate</label><input type="number" step="0.01" min="0" id="hourlyRate" /></div>
+          <div class="field"><label for="lateFee">Late fee per block</label><input type="number" step="0.01" min="0" id="lateFee" /></div>
+          <div class="field"><label for="currency">Currency symbol</label><input type="text" id="currency" maxlength="4" /></div>
+        </div>
+        <div class="field-error" id="settingsError" hidden></div>
+        <div class="submit-row"><button type="submit" class="btn btn-primary">Save settings</button></div>
+      </form>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const state = { children: [], groups: [] };
+  const el = (id) => document.getElementById(id);
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  async function api(path, opts) {
+    const res = await fetch('/api' + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+    if (res.status === 401) { location.href = '/login.html'; throw new Error('Not authenticated'); }
+    if (!res.ok) {
+      let msg = 'Request failed';
+      try { msg = (await res.json()).error || msg; } catch (e) {}
+      throw new Error(msg);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  function showToast(message, isError) {
+    const t = el('toast');
+    t.textContent = message;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { t.className = 'toast'; }, 2600);
+  }
+
+  // ---------- groups ----------
+  function populateGroupSelects() {
+    const opts = state.groups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+    el('childGroup').innerHTML = '<option value="">— No group —</option>' + opts;
+    el('adminGroupFilter').innerHTML = '<option value="">All groups</option>' + opts;
+    el('bulkGroupList').textContent = 'Groups: ' + state.groups.join(', ');
+  }
+
+  // ---------- children roster ----------
+  async function loadChildren() {
+    state.children = await api('/children?all=1');
+    renderTable();
+  }
+
+  function renderTable() {
+    const q = (el('adminSearch').value || '').toLowerCase().trim();
+    const groupFilter = el('adminGroupFilter').value;
+    const showArchived = el('showArchived').checked;
+
+    const rows = state.children.filter(c => {
+      if (!showArchived && !c.active) return false;
+      if (groupFilter && c.group_name !== groupFilter) return false;
+      if (q && !(c.full_name.toLowerCase().includes(q) || (c.group_name || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+
+    el('rosterCount').textContent = state.children.filter(c => c.active).length + ' active · ' + state.children.length + ' total';
+    el('adminEmpty').hidden = rows.length !== 0;
+
+    el('adminBody').innerHTML = rows.map(c => `
+      <tr class="${c.active ? '' : 'archived-row'}">
+        <td>${escapeHtml(c.full_name)}</td>
+        <td>${c.group_name ? `<span class="group-chip">${escapeHtml(c.group_name)}</span>` : '<span class="group-chip empty">—</span>'}</td>
+        <td>${escapeHtml(c.parent_name || '—')}</td>
+        <td>${escapeHtml(c.parent_phone || '—')}</td>
+        <td>${escapeHtml(c.pickup_notes || '—')}</td>
+        <td style="white-space:nowrap;">
+          <button class="row-action" data-edit="${c.id}">Edit</button>
+          ${c.active
+            ? `<button class="row-action danger" data-archive="${c.id}">Archive</button>`
+            : `<button class="row-action" data-restore="${c.id}">Restore</button>`}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  el('adminSearch').addEventListener('input', renderTable);
+  el('adminGroupFilter').addEventListener('change', renderTable);
+  el('showArchived').addEventListener('change', renderTable);
+
+  function resetChildForm() {
+    el('childId').value = '';
+    el('childForm').reset();
+    el('childError').hidden = true;
+    el('childSubmitBtn').textContent = 'Add child';
+    el('childCancelBtn').hidden = true;
+  }
+  el('childCancelBtn').addEventListener('click', resetChildForm);
+
+  el('adminBody').addEventListener('click', async (e) => {
+    const editId = e.target.dataset && e.target.dataset.edit;
+    const archiveId = e.target.dataset && e.target.dataset.archive;
+    const restoreId = e.target.dataset && e.target.dataset.restore;
+
+    if (editId) {
+      const c = state.children.find(x => String(x.id) === editId);
+      if (!c) return;
+      el('childId').value = c.id;
+      el('childName').value = c.full_name || '';
+      el('childGroup').value = c.group_name || '';
+      el('childParent').value = c.parent_name || '';
+      el('childPhone').value = c.parent_phone || '';
+      el('childPickup').value = c.pickup_notes || '';
+      el('childSubmitBtn').textContent = 'Save changes';
+      el('childCancelBtn').hidden = false;
+      el('childName').focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (archiveId) {
+      if (!confirm('Archive this child? Their attendance history is kept, but they’ll drop off Roll Call.')) return;
+      try { await api('/children/' + archiveId + '/archive', { method: 'POST' }); await loadChildren(); showToast('Archived.'); }
+      catch (err) { showToast(err.message, true); }
+    }
+    if (restoreId) {
+      try { await api('/children/' + restoreId + '/restore', { method: 'POST' }); await loadChildren(); showToast('Restored.'); }
+      catch (err) { showToast(err.message, true); }
+    }
+  });
+
+  el('childForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = el('childId').value;
+    const payload = {
+      full_name: el('childName').value.trim(),
+      group_name: el('childGroup').value || null,
+      parent_name: el('childParent').value.trim() || null,
+      parent_phone: el('childPhone').value.trim() || null,
+      pickup_notes: el('childPickup').value.trim() || null
+    };
+    el('childError').hidden = true;
+    try {
+      if (id) await api('/children/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+      else await api('/children', { method: 'POST', body: JSON.stringify(payload) });
+      resetChildForm();
+      await loadChildren();
+      showToast(id ? 'Child updated.' : 'Child added.');
+    } catch (err) {
+      el('childError').textContent = err.message;
+      el('childError').hidden = false;
+    }
+  });
+
+  el('bulkAddBtn').addEventListener('click', async () => {
+    const lines = el('bulkText').value.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    let added = 0, failed = 0;
+    const errors = [];
+    for (const line of lines) {
+      const [name, group] = line.split(',').map(s => s && s.trim());
+      if (!name) { failed++; continue; }
+      try {
+        await api('/children', { method: 'POST', body: JSON.stringify({ full_name: name, group_name: group || null }) });
+        added++;
+      } catch (err) { failed++; errors.push(name + ': ' + err.message); }
+    }
+    el('bulkText').value = '';
+    await loadChildren();
+    const msg = `Added ${added} child${added === 1 ? '' : 'ren'}.` + (failed ? ` ${failed} failed${errors.length ? ' (' + errors[0] + (errors.length > 1 ? ', …' : '') + ')' : ''}.` : '');
+    showToast(msg, failed > 0 && added === 0);
+  });
+
+  // ---------- aftercare settings ----------
+  async function loadSettings() {
+    const s = await api('/settings');
+    el('cutoffTime').value = s.cutoff_time || '';
+    el('hourlyRate').value = s.hourly_rate || '';
+    el('lateFee').value = s.late_fee_per_block || '';
+    el('currency').value = s.currency || '';
+  }
+
+  el('settingsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    el('settingsError').hidden = true;
+    try {
+      await api('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          cutoff_time: el('cutoffTime').value,
+          hourly_rate: el('hourlyRate').value,
+          late_fee_per_block: el('lateFee').value,
+          currency: el('currency').value
+        })
+      });
+      showToast('Settings saved.');
+    } catch (err) {
+      el('settingsError').textContent = err.message;
+      el('settingsError').hidden = false;
+    }
+  });
+
+  el('logoutBtn').addEventListener('click', async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    location.href = '/login.html';
+  });
+
+  // ---------- init ----------
+  (async function init() {
+    try {
+      state.groups = await api('/groups');
+      populateGroupSelects();
+      await Promise.all([loadChildren(), loadSettings()]);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

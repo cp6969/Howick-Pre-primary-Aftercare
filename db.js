@@ -59,6 +59,60 @@ const defaultSettings = {
 const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 for (const [key, value] of Object.entries(defaultSettings)) insertSetting.run(key, value);
 
+// The school's actual aftercare groups -- fixed list, not admin-editable via
+// the UI (a typo'd group name would silently split a group in two on the
+// roster). Shared between the settings-page dropdown and server-side
+// validation on the children endpoints.
+const GROUPS = [
+  'Baby Monkeys',
+  'Busy Bees',
+  'Turtles',
+  'Butterflies',
+  'Dragon Flies',
+  'Owls',
+  'Ladybirds'
+];
+
+// Demo roster, seeded once on a genuinely empty database (first install) so
+// the site has something to click through. Only fires when the children
+// table has zero rows at all -- including archived ones -- so it can never
+// re-add itself after a real roster has been entered and later trimmed.
+const DEMO_CHILDREN = [
+  { full_name: 'Amara Mokoena', group_name: 'Baby Monkeys', parent_name: 'Thandiwe Mokoena', parent_phone: '082 123 4567', pickup_notes: 'Grandmother (Nomsa), Aftercare van' },
+  { full_name: 'Ethan van Wyk', group_name: 'Baby Monkeys', parent_name: 'Lente van Wyk', parent_phone: '083 234 5678', pickup_notes: 'Father only' },
+  { full_name: 'Zara Naidoo', group_name: 'Baby Monkeys', parent_name: 'Priya Naidoo', parent_phone: '084 345 6789', pickup_notes: 'Mother, Au pair (Sarah)' },
+  { full_name: 'Liam Botha', group_name: 'Busy Bees', parent_name: 'Marlize Botha', parent_phone: '072 456 7890', pickup_notes: 'Mother, Father' },
+  { full_name: 'Sipho Dlamini', group_name: 'Busy Bees', parent_name: 'Nomvula Dlamini', parent_phone: '073 567 8901', pickup_notes: 'Grandfather (Bheki)' },
+  { full_name: 'Chloe Reddy', group_name: 'Busy Bees', parent_name: 'Kavitha Reddy', parent_phone: '074 678 9012', pickup_notes: 'Nanny (Precious)' },
+  { full_name: 'Jayden Pillay', group_name: 'Turtles', parent_name: 'Ravi Pillay', parent_phone: '076 789 0123', pickup_notes: 'Mother only' },
+  { full_name: 'Mia Fourie', group_name: 'Turtles', parent_name: 'Elzette Fourie', parent_phone: '078 890 1234', pickup_notes: 'Father, Grandmother' },
+  { full_name: 'Kwena Mahlangu', group_name: 'Turtles', parent_name: 'Lindiwe Mahlangu', parent_phone: '079 901 2345', pickup_notes: 'Aunt (Zanele)' },
+  { full_name: 'Isabella Coetzee', group_name: 'Butterflies', parent_name: 'Anriette Coetzee', parent_phone: '081 012 3456', pickup_notes: 'Mother, Father, Nanny' },
+  { full_name: 'Nathi Zulu', group_name: 'Butterflies', parent_name: 'Thabo Zulu', parent_phone: '082 111 2233', pickup_notes: 'Father only' },
+  { full_name: 'Emma Govender', group_name: 'Butterflies', parent_name: 'Suresh Govender', parent_phone: '083 222 3344', pickup_notes: 'Mother, Grandmother' },
+  { full_name: 'Michael Adams', group_name: 'Dragon Flies', parent_name: 'Cindy Adams', parent_phone: '084 333 4455', pickup_notes: 'Mother only' },
+  { full_name: 'Lerato Khumalo', group_name: 'Dragon Flies', parent_name: 'Nokuthula Khumalo', parent_phone: '072 444 5566', pickup_notes: 'Father, Aunt (Palesa)' },
+  { full_name: 'Ruan Kruger', group_name: 'Dragon Flies', parent_name: 'Wynand Kruger', parent_phone: '073 555 6677', pickup_notes: 'Mother, Father' },
+  { full_name: 'Ayanda Nkosi', group_name: 'Owls', parent_name: 'Bongani Nkosi', parent_phone: '074 666 7788', pickup_notes: 'Grandmother (Beauty)' },
+  { full_name: 'Sophia Marais', group_name: 'Owls', parent_name: 'Chantelle Marais', parent_phone: '076 777 8899', pickup_notes: 'Mother, Father' },
+  { full_name: 'Kabelo Sithole', group_name: 'Owls', parent_name: 'Refilwe Sithole', parent_phone: '078 888 9900', pickup_notes: 'Nanny (Grace)' },
+  { full_name: 'Grace Steyn', group_name: 'Ladybirds', parent_name: 'Ilse Steyn', parent_phone: '079 999 0011', pickup_notes: 'Mother only' },
+  { full_name: 'Junior Mabaso', group_name: 'Ladybirds', parent_name: 'Winnie Mabaso', parent_phone: '081 000 1122', pickup_notes: 'Father, Grandfather' }
+];
+
+const childrenCount = db.prepare('SELECT COUNT(*) AS n FROM children').get().n;
+if (childrenCount === 0) {
+  const insertChild = db.prepare(`
+    INSERT INTO children (full_name, group_name, parent_name, parent_phone, pickup_notes, active, created_at, updated_at)
+    VALUES (@full_name, @group_name, @parent_name, @parent_phone, @pickup_notes, 1, @now, @now)
+  `);
+  const now = Date.now();
+  const seedDemo = db.transaction((rows) => {
+    for (const row of rows) insertChild.run(Object.assign({ now }, row));
+  });
+  seedDemo(DEMO_CHILDREN);
+}
+
 // --- SAST (Africa/Johannesburg, UTC+2 year-round, no DST) date helpers ---
 // Deliberately not relying on the server's local timezone (a Docker
 // container's default is UTC), so "today" and "13:00" always mean the same
@@ -89,3 +143,4 @@ module.exports.todaySAST = todaySAST;
 module.exports.nowMs = nowMs;
 module.exports.sastDateTimeMs = sastDateTimeMs;
 module.exports.sastArrivalMs = sastArrivalMs;
+module.exports.GROUPS = GROUPS;

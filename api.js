@@ -1,10 +1,19 @@
 const express = require('express');
 const db = require('./db');
-const { todaySAST, nowMs, sastDateTimeMs, sastArrivalMs } = db;
+const { todaySAST, nowMs, sastDateTimeMs, sastArrivalMs, GROUPS } = db;
 
 const router = express.Router();
 
 // ---------- helpers ----------
+
+function validGroupOrNull(group_name) {
+  // No group assigned is fine (some kids aren't in a class group yet); an
+  // unrecognized one almost always means a typo that would silently split
+  // a group across two spellings on the roster, so it's rejected outright.
+  if (group_name === undefined || group_name === null || group_name === '') return { ok: true, value: null };
+  if (GROUPS.includes(group_name)) return { ok: true, value: group_name };
+  return { ok: false };
+}
 
 function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();
@@ -67,6 +76,12 @@ const ATTENDANCE_JOIN = `
   JOIN children c ON c.id = a.child_id
 `;
 
+// ---------- groups ----------
+
+router.get('/groups', (req, res) => {
+  res.json(GROUPS);
+});
+
 // ---------- children ----------
 
 router.get('/children', (req, res) => {
@@ -81,11 +96,14 @@ router.post('/children', (req, res) => {
   const { full_name, group_name, parent_name, parent_phone, pickup_notes } = req.body || {};
   if (!full_name || !full_name.trim()) return res.status(400).json({ error: 'full_name is required' });
 
+  const group = validGroupOrNull(group_name);
+  if (!group.ok) return res.status(400).json({ error: `Unknown group "${group_name}". Must be one of: ${GROUPS.join(', ')}` });
+
   const now = nowMs();
   const result = db.prepare(`
     INSERT INTO children (full_name, group_name, parent_name, parent_phone, pickup_notes, active, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, 1, ?, ?)
-  `).run(full_name.trim(), group_name || null, parent_name || null, parent_phone || null, pickup_notes || null, now, now);
+  `).run(full_name.trim(), group.value, parent_name || null, parent_phone || null, pickup_notes || null, now, now);
 
   const row = db.prepare('SELECT * FROM children WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(serializeChild(row));
@@ -98,13 +116,16 @@ router.put('/children/:id', (req, res) => {
   const { full_name, group_name, parent_name, parent_phone, pickup_notes } = req.body || {};
   if (full_name !== undefined && !full_name.trim()) return res.status(400).json({ error: 'full_name cannot be empty' });
 
+  const group = group_name !== undefined ? validGroupOrNull(group_name) : { ok: true, value: child.group_name };
+  if (!group.ok) return res.status(400).json({ error: `Unknown group "${group_name}". Must be one of: ${GROUPS.join(', ')}` });
+
   db.prepare(`
     UPDATE children SET
       full_name = ?, group_name = ?, parent_name = ?, parent_phone = ?, pickup_notes = ?, updated_at = ?
     WHERE id = ?
   `).run(
     full_name !== undefined ? full_name.trim() : child.full_name,
-    group_name !== undefined ? group_name : child.group_name,
+    group.value,
     parent_name !== undefined ? parent_name : child.parent_name,
     parent_phone !== undefined ? parent_phone : child.parent_phone,
     pickup_notes !== undefined ? pickup_notes : child.pickup_notes,
