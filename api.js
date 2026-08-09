@@ -215,20 +215,10 @@ router.get('/attendance/export.csv', (req, res) => {
   res.send(csv);
 });
 
-// ---------- settings ----------
-
-router.get('/settings', (req, res) => {
-  res.json(getSettings());
-});
-
-router.put('/settings', (req, res) => {
-  const allowed = ['cutoff_time', 'hourly_rate', 'late_fee_per_block', 'currency'];
-  const update = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
-  for (const key of allowed) {
-    if (req.body && req.body[key] !== undefined) update.run(key, String(req.body[key]));
-  }
-  res.json(getSettings());
-});
+// Aftercare rates (cutoff time / hourly rate / late fee / currency) moved
+// to /api/admin/settings, gated behind the Admin PIN -- see admin.js. Not
+// left here even as a read-only GET, since the whole point of moving them
+// was to keep day-to-day staff out of billing rates, not just hide the form.
 
 // ---------- daily log email ----------
 // Automatically emails "today's log" once every checked-in child has been

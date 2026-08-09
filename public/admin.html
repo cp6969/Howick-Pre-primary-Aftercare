@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Howick Pre-Primary Aftercare</title>
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+  body { padding: 0 0 56px; min-height: 100vh; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px) 0; display: flex; flex-direction: column; gap: 22px; }
+
+  .masthead-outer { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .masthead {
+    max-width: 1080px; margin: 0 auto; padding: 20px clamp(16px, 4vw, 48px) 22px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  }
+  .masthead-id { display: flex; align-items: center; gap: 14px; }
+  .badge-mark {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(155deg, var(--brand-purple) 0%, #5B3A85 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: var(--shadow);
+  }
+  .badge-mark svg { width: 22px; height: 22px; }
+  .wordmark { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 3vw, 25px); line-height: 1.05; letter-spacing: -0.01em; }
+  .wordmark .w-howick { color: var(--brand-purple); }
+  .wordmark .w-sub { display: block; font-family: var(--font-display); font-weight: 500; font-size: 13px; color: var(--brand-blue); letter-spacing: 0.01em; margin-top: 1px; }
+  .masthead-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .scallop {
+    height: 14px; background-color: var(--paper);
+    background-image: radial-gradient(circle at 11px 0, var(--surface) 11px, transparent 12px);
+    background-size: 22px 14px; background-repeat: repeat-x; background-position: center top;
+  }
+
+  .btn {
+    appearance: none; border: none; cursor: pointer; font-family: var(--font-display);
+    font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    border-radius: 999px; padding: 11px 20px; display: inline-flex; align-items: center; gap: 8px;
+    transition: transform 0.08s ease, filter 0.15s ease; text-decoration: none;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+  .btn-primary { background: var(--brand-purple); color: var(--brand-purple-ink); box-shadow: 0 6px 16px -8px rgba(122, 82, 153, 0.5); }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-ghost { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line-strong); }
+  .btn-ghost:hover { background: var(--surface); color: var(--ink); }
+  .btn-sm { padding: 7px 14px; font-size: 11.5px; }
+  .btn[disabled] { opacity: 0.5; cursor: default; pointer-events: none; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); gap: 12px; flex-wrap: wrap; }
+  .panel-head h2 { font-family: var(--font-display); font-size: 18px; margin: 0; font-weight: 600; }
+  .panel-head p { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+  .panel-body { padding: 18px 20px 20px; }
+
+  .field label { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-display); }
+  .field select, .field input { width: 100%; font-family: var(--font-body); font-size: 13.5px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 9px 10px; background: var(--surface); color: var(--ink); }
+  .field-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .field-row .field { flex: 1; min-width: 160px; }
+  .form-grid { display: flex; flex-direction: column; gap: 12px; }
+  .field-error { font-size: 12px; color: var(--brand-coral); margin-top: -4px; }
+  .settings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 720px) { .settings-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .search-row { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); flex-wrap: wrap; }
+  .search-row input[type="month"] { font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .search-row label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-weight: 600; font-family: var(--font-display); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface-2); }
+  .archived-row td { opacity: 0.55; }
+  .group-chip { display: inline-block; font-size: 11px; font-weight: 600; font-family: var(--font-display); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .group-chip.empty { background: var(--surface-2); color: var(--ink-faint); }
+  .tally-count { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+  .row-action { font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--brand-blue); background: none; border: none; cursor: pointer; padding: 4px 0; }
+  .row-action:hover { text-decoration: underline; }
+  .empty-state { padding: 28px 20px; text-align: center; color: var(--ink-faint); font-size: 13px; }
+  .late-tag { color: var(--status-late-fg); font-weight: 700; font-size: 11px; text-transform: uppercase; }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(20, 24, 18, 0.45); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px; overflow-y: auto; z-index: 50; }
+  .modal-backdrop[hidden] { display: none; }
+  .modal { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); width: 100%; max-width: 640px; border: 1px solid var(--line); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { font-family: var(--font-display); font-size: 17px; margin: 0; font-weight: 600; }
+  .modal-head p { margin: 3px 0 0; font-size: 12px; color: var(--ink-faint); }
+  .modal-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--ink-faint); line-height: 1; padding: 4px; }
+  .modal-close:hover { color: var(--ink); }
+  .modal-body { padding: 0; max-height: 70vh; overflow-y: auto; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 999px; font-size: 12.5px; box-shadow: var(--shadow); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--brand-coral); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="masthead-outer">
+  <header class="masthead">
+    <div class="masthead-id">
+      <div class="badge-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"></path>
+          <path d="M9 12.3l1.9 1.9 4-4.1"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="wordmark"><span class="w-howick">Howick</span><span class="w-sub">Admin</span></div>
+      </div>
+    </div>
+    <div class="masthead-meta">
+      <a class="btn btn-ghost btn-sm" href="/index.html">&larr; Back to tracker</a>
+      <a class="btn btn-ghost btn-sm" href="/settings.html">Settings</a>
+      <button class="btn btn-ghost btn-sm" id="lockAdminBtn">Lock admin</button>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+</div>
+<div class="scallop"></div>
+
+<div class="wrap" style="margin-top: 22px;">
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Aftercare settings</h2>
+        <p>Billing rates -- moved here so day-to-day staff can't see or change them from the main site.</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <form id="settingsForm" class="form-grid">
+        <div class="settings-grid">
+          <div class="field"><label for="cutoffTime">Collection cutoff</label><input type="time" id="cutoffTime" /></div>
+          <div class="field"><label for="hourlyRate">Hourly rate</label><input type="number" step="0.01" min="0" id="hourlyRate" /></div>
+          <div class="field"><label for="lateFee">Late fee per block</label><input type="number" step="0.01" min="0" id="lateFee" /></div>
+          <div class="field"><label for="currency">Currency symbol</label><input type="text" id="currency" maxlength="4" /></div>
+        </div>
+        <div class="field-error" id="settingsError" hidden></div>
+        <div><button type="submit" class="btn btn-primary">Save settings</button></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Children — attendance &amp; monthly tally</h2>
+        <p>Days of aftercare attended in the selected month. Click a child to see their full attendance log.</p>
+      </div>
+      <span class="count" id="tallyCount" style="font-size:12.5px; color:var(--ink-faint); font-family:var(--font-mono);">—</span>
+    </div>
+    <div class="search-row">
+      <input type="month" id="monthPicker" />
+      <label><input type="checkbox" id="showArchived" style="width:auto;" /> Show archived</label>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Child</th><th>Group</th><th>Days this month</th><th></th></tr></thead>
+        <tbody id="tallyBody"></tbody>
+      </table>
+      <div class="empty-state" id="tallyEmpty" hidden>No children on the roster yet.</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Attendance log modal -->
+<div class="modal-backdrop" id="historyModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="historyModalTitle">Attendance log</h2>
+        <p id="historyModalSub"></p>
+      </div>
+      <button class="modal-close" data-close="historyModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Date</th><th>Arrival</th><th>Collection</th><th>Collected by</th><th></th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="historyEmpty" hidden>No attendance recorded for this child yet.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/group-colors.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const state = { tally: [] };
+  const el = (id) => document.getElementById(id);
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function groupChipHtml(group) {
+    if (!group) return '<span class="group-chip empty">—</span>';
+    const c = (window.GROUP_COLORS && window.GROUP_COLORS[group]) || window.GROUP_COLOR_FALLBACK;
+    return `<span class="group-chip" style="background:${c.tint};color:${c.text}">${escapeHtml(group)}</span>`;
+  }
+
+  async function api(path, opts) {
+    const res = await fetch('/api/admin' + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+    if (res.status === 401) { location.href = '/login.html'; throw new Error('Not authenticated'); }
+    if (res.status === 403) { location.href = '/admin-login.html'; throw new Error('Admin PIN required'); }
+    if (!res.ok) {
+      let msg = 'Request failed';
+      try { msg = (await res.json()).error || msg; } catch (e) {}
+      throw new Error(msg);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  function showToast(message, isError) {
+    const t = el('toast');
+    t.textContent = message;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { t.className = 'toast'; }, 2600);
+  }
+
+  function openModal(id) { el(id).hidden = false; }
+  function closeModal(id) { el(id).hidden = true; }
+  document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.close)));
+  document.querySelectorAll('.modal-backdrop').forEach(bd => bd.addEventListener('click', (e) => { if (e.target === bd) closeModal(bd.id); }));
+
+  // ---------- aftercare settings ----------
+  async function loadSettings() {
+    const s = await api('/settings');
+    el('cutoffTime').value = s.cutoff_time || '';
+    el('hourlyRate').value = s.hourly_rate || '';
+    el('lateFee').value = s.late_fee_per_block || '';
+    el('currency').value = s.currency || '';
+  }
+
+  el('settingsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    el('settingsError').hidden = true;
+    try {
+      await api('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          cutoff_time: el('cutoffTime').value,
+          hourly_rate: el('hourlyRate').value,
+          late_fee_per_block: el('lateFee').value,
+          currency: el('currency').value
+        })
+      });
+      showToast('Settings saved.');
+    } catch (err) {
+      el('settingsError').textContent = err.message;
+      el('settingsError').hidden = false;
+    }
+  });
+
+  // ---------- monthly tally ----------
+  function currentMonth() {
+    return new Date().toISOString().slice(0, 7);
+  }
+
+  async function loadTally() {
+    const month = el('monthPicker').value || currentMonth();
+    const all = el('showArchived').checked ? '1' : '0';
+    const result = await api(`/children-tally?month=${encodeURIComponent(month)}&all=${all}`);
+    state.tally = result.children;
+    renderTally();
+  }
+
+  function renderTally() {
+    const rows = state.tally;
+    el('tallyCount').textContent = rows.length + (rows.length === 1 ? ' child' : ' children');
+    el('tallyEmpty').hidden = rows.length !== 0;
+    el('tallyBody').innerHTML = rows.map(c => `
+      <tr class="${c.active ? '' : 'archived-row'}">
+        <td>${escapeHtml(c.full_name)}</td>
+        <td>${groupChipHtml(c.group_name)}</td>
+        <td><span class="tally-count">${c.days_this_month}</span></td>
+        <td><button class="row-action" data-history="${c.id}" data-name="${escapeHtml(c.full_name)}">View log</button></td>
+      </tr>
+    `).join('');
+  }
+
+  el('monthPicker').addEventListener('change', () => loadTally().catch(err => showToast(err.message, true)));
+  el('showArchived').addEventListener('change', () => loadTally().catch(err => showToast(err.message, true)));
+
+  // ---------- per-child history modal ----------
+  el('tallyBody').addEventListener('click', async (e) => {
+    const id = e.target.dataset && e.target.dataset.history;
+    if (!id) return;
+    const name = e.target.dataset.name;
+    el('historyModalTitle').textContent = name;
+    el('historyModalSub').textContent = 'Loading…';
+    el('historyBody').innerHTML = '';
+    el('historyEmpty').hidden = true;
+    openModal('historyModal');
+    try {
+      const rows = await api('/children/' + id + '/history');
+      el('historyModalSub').textContent = rows.length + (rows.length === 1 ? ' day recorded' : ' days recorded') + ', newest first';
+      el('historyEmpty').hidden = rows.length !== 0;
+      el('historyBody').innerHTML = rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.date)}</td>
+          <td>${r.checked_in_time || '—'}</td>
+          <td>${r.collected_time || '—'}</td>
+          <td>${escapeHtml(r.collected_by || '—')}</td>
+          <td>${r.late_collection ? '<span class="late-tag">Late</span>' : ''}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      el('historyModalSub').textContent = '';
+      showToast(err.message, true);
+    }
+  });
+
+  // ---------- lock / logout ----------
+  el('lockAdminBtn').addEventListener('click', async () => {
+    await fetch('/admin/logout', { method: 'POST' });
+    location.href = '/index.html';
+  });
+  el('logoutBtn').addEventListener('click', async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    location.href = '/login.html';
+  });
+
+  // ---------- init ----------
+  (async function init() {
+    el('monthPicker').value = currentMonth();
+    try {
+      await Promise.all([loadSettings(), loadTally()]);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

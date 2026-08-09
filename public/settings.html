@@ -116,6 +116,7 @@
     </div>
     <div class="masthead-meta">
       <a class="btn btn-ghost btn-sm" href="/index.html">&larr; Back to tracker</a>
+      <a class="btn btn-ghost btn-sm" href="/admin.html">Admin</a>
       <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
     </div>
   </header>
@@ -186,26 +187,7 @@
     </div>
   </section>
 
-  <section class="panel">
-    <div class="panel-head">
-      <div>
-        <h2>Aftercare settings</h2>
-        <p>Used for the "late collection" flag on the tracker and the billing workbook.</p>
-      </div>
-    </div>
-    <div class="panel-body">
-      <form id="settingsForm" class="form-grid">
-        <div class="settings-grid">
-          <div class="field"><label for="cutoffTime">Collection cutoff</label><input type="time" id="cutoffTime" /></div>
-          <div class="field"><label for="hourlyRate">Hourly rate</label><input type="number" step="0.01" min="0" id="hourlyRate" /></div>
-          <div class="field"><label for="lateFee">Late fee per block</label><input type="number" step="0.01" min="0" id="lateFee" /></div>
-          <div class="field"><label for="currency">Currency symbol</label><input type="text" id="currency" maxlength="4" /></div>
-        </div>
-        <div class="field-error" id="settingsError" hidden></div>
-        <div class="submit-row"><button type="submit" class="btn btn-primary">Save settings</button></div>
-      </form>
-    </div>
-  </section>
+  <p style="font-size:12.5px; color:var(--ink-faint); text-align:center;">Looking for billing rates? They've moved to <a href="/admin.html" style="color:var(--brand-blue);">Admin</a>.</p>
 
   <section class="panel">
     <div class="panel-head">
@@ -414,35 +396,6 @@
     showToast(msg, failed > 0 && added === 0);
   });
 
-  // ---------- aftercare settings ----------
-  async function loadSettings() {
-    const s = await api('/settings');
-    el('cutoffTime').value = s.cutoff_time || '';
-    el('hourlyRate').value = s.hourly_rate || '';
-    el('lateFee').value = s.late_fee_per_block || '';
-    el('currency').value = s.currency || '';
-  }
-
-  el('settingsForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    el('settingsError').hidden = true;
-    try {
-      await api('/settings', {
-        method: 'PUT',
-        body: JSON.stringify({
-          cutoff_time: el('cutoffTime').value,
-          hourly_rate: el('hourlyRate').value,
-          late_fee_per_block: el('lateFee').value,
-          currency: el('currency').value
-        })
-      });
-      showToast('Settings saved.');
-    } catch (err) {
-      el('settingsError').textContent = err.message;
-      el('settingsError').hidden = false;
-    }
-  });
-
   el('logoutBtn').addEventListener('click', async () => {
     await fetch('/auth/logout', { method: 'POST' });
     location.href = '/login.html';
@@ -524,7 +477,7 @@
     try {
       state.groups = await api('/groups');
       populateGroupSelects();
-      await Promise.all([loadChildren(), loadSettings(), loadDailyLogStatus()]);
+      await Promise.all([loadChildren(), loadDailyLogStatus()]);
     } catch (err) {
       showToast(err.message, true);
     }

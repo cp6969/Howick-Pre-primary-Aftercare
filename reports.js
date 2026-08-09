@@ -89,6 +89,46 @@ function dayCollectionStatus(dateStr) {
   };
 }
 
+// Full history for one child, newest first -- powers the Admin page's
+// per-child attendance log. Not scoped to any date range, since there's no
+// obvious "recent enough" cutoff for a small school roster.
+function attendanceHistoryForChild(childId) {
+  const settings = getSettings();
+  const rows = db.prepare(`${ATTENDANCE_JOIN} WHERE a.child_id = ? ORDER BY a.date DESC`).all(childId);
+  return rows.map(r => serializeAttendanceRow(r, settings));
+}
+
+function monthDateRange(yearMonth) {
+  const m = /^(\d{4})-(\d{2})$/.exec(yearMonth || '');
+  if (!m) throw new Error('month must be in YYYY-MM format');
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate(); // day 0 of next month = last day of this one
+  return { from: `${yearMonth}-01`, to: `${yearMonth}-${String(lastDay).padStart(2, '0')}` };
+}
+
+// One row per child (active only by default) with how many days of
+// aftercare they attended in the given month -- the Admin page's monthly
+// tally, one query per month rather than pulling every attendance row and
+// counting client-side.
+function monthlyTallyForAllChildren(yearMonth, { includeArchived } = {}) {
+  const { from, to } = monthDateRange(yearMonth);
+  const children = db.prepare(
+    includeArchived
+      ? 'SELECT id, full_name, group_name, active FROM children ORDER BY full_name'
+      : 'SELECT id, full_name, group_name, active FROM children WHERE active = 1 ORDER BY full_name'
+  ).all();
+  const tallyRows = db.prepare('SELECT child_id, COUNT(*) AS days FROM attendance WHERE date BETWEEN ? AND ? GROUP BY child_id').all(from, to);
+  const tallyByChild = new Map(tallyRows.map(r => [r.child_id, r.days]));
+  return children.map(c => ({
+    id: c.id,
+    full_name: c.full_name,
+    group_name: c.group_name,
+    active: !!c.active,
+    days_this_month: tallyByChild.get(c.id) || 0
+  }));
+}
+
 const CSV_HEADER = ['Date', 'Child Name', 'Group', 'Parent / Guardian', 'Arrival Time', 'Collection Time', 'Collected By', 'Late Pickup?'];
 
 function csvEscape(v) {
@@ -123,6 +163,9 @@ module.exports = {
   serializeAttendanceRow,
   attendanceForDate,
   attendanceForRange,
+  attendanceHistoryForChild,
+  monthDateRange,
+  monthlyTallyForAllChildren,
   dayCollectionStatus,
   buildCsv
 };

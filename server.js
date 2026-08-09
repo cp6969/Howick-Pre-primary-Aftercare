@@ -6,9 +6,10 @@ const bcrypt = require('bcryptjs');
 const SQLiteSessionStore = require('./session-store');
 
 const apiRouter = require('./api');
+const adminRouter = require('./admin');
 const scheduler = require('./scheduler');
 
-const REQUIRED_ENV = ['SESSION_SECRET', 'APP_USERNAME', 'APP_PASSWORD_HASH'];
+const REQUIRED_ENV = ['SESSION_SECRET', 'APP_USERNAME', 'APP_PASSWORD_HASH', 'ADMIN_PIN_HASH'];
 const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
 if (missing.length) {
   console.error(`Missing required environment variables: ${missing.join(', ')}`);
@@ -50,6 +51,20 @@ function requireSiteAuthApi(req, res, next) {
   res.status(401).json({ error: 'Not authenticated' });
 }
 
+// A second, narrower gate on top of the site login -- the Admin area
+// (billing rates, per-child attendance history) needs a PIN even from an
+// already-logged-in staff member. Requires siteAuthed too, but only
+// because these are always registered after app.use(requireSiteAuth)
+// below, not because these functions check it themselves.
+function requireAdminAuth(req, res, next) {
+  if (req.session && req.session.adminAuthed) return next();
+  res.redirect('/admin-login.html');
+}
+function requireAdminAuthApi(req, res, next) {
+  if (req.session && req.session.adminAuthed) return next();
+  res.status(403).json({ error: 'Admin PIN required' });
+}
+
 app.get('/login.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
@@ -80,6 +95,23 @@ app.post('/auth/logout', (req, res) => {
   req.session.destroy(() => res.status(204).end());
 });
 
+app.post('/admin/login', async (req, res) => {
+  if (!(req.session && req.session.siteAuthed)) return res.status(401).json({ error: 'Not authenticated' });
+  const { pin } = req.body || {};
+  const pinOk = pin && await bcrypt.compare(String(pin), process.env.ADMIN_PIN_HASH);
+  if (!pinOk) return res.status(401).json({ error: 'Incorrect PIN' });
+  req.session.adminAuthed = true;
+  res.status(204).end();
+});
+
+// "Lock admin" -- clears just the admin flag, not the whole site session
+// (a logged-in staff member stays logged in, they just need the PIN again
+// to get back into the Admin area).
+app.post('/admin/logout', (req, res) => {
+  if (req.session) req.session.adminAuthed = false;
+  res.status(204).end();
+});
+
 // Every /api/* response depends on the caller's session, so it must never be
 // cached or conditionally revalidated by the browser.
 app.use('/api', requireSiteAuthApi);
@@ -88,8 +120,18 @@ app.use('/api', (req, res, next) => {
   next();
 });
 app.use('/api', apiRouter);
+app.use('/api/admin', requireAdminAuthApi);
+app.use('/api/admin', adminRouter);
 
 app.use(requireSiteAuth);
+
+app.get('/admin-login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-login.html'));
+});
+app.get('/admin.html', requireAdminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('*', (req, res) => {

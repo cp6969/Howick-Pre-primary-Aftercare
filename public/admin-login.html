@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Howick Pre-Primary Aftercare</title>
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); background: var(--paper); color: var(--ink);
+  }
+  .login-box { width: 100%; max-width: 340px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 30px 26px; box-shadow: var(--shadow); }
+  .badge-mark {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(155deg, var(--brand-purple) 0%, #5B3A85 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+  }
+  .badge-mark svg { width: 20px; height: 20px; }
+  h1 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 0 0 2px; color: var(--ink); }
+  .sub { font-size: 12.5px; color: var(--ink-soft); margin: 10px 0 20px; line-height: 1.5; }
+  label { display: block; font-size: 11px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; font-family: var(--font-display); }
+  input {
+    width: 100%; padding: 10px 12px; margin-bottom: 14px; background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: 10px; color: var(--ink); font-size: 20px; letter-spacing: 0.3em; text-align: center; font-family: var(--font-mono);
+  }
+  input:focus { outline: 2px solid var(--brand-purple); outline-offset: 1px; }
+  button { width: 100%; padding: 11px; background: var(--brand-purple); color: var(--brand-purple-ink); border: none; border-radius: 999px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-display); cursor: pointer; }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .back-link { display: block; text-align: center; margin-top: 16px; font-size: 12.5px; color: var(--ink-soft); text-decoration: none; }
+  .back-link:hover { color: var(--ink); text-decoration: underline; }
+  .error-message { margin-top: 12px; font-size: 12.5px; color: var(--brand-coral); text-align: center; }
+</style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="badge-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"></path>
+        <path d="M9 12.3l1.9 1.9 4-4.1"></path>
+      </svg>
+    </div>
+    <h1>Admin area</h1>
+    <p class="sub">Billing rates and per-child attendance history. Enter the admin PIN to continue.</p>
+    <form id="pin-form">
+      <label for="pin">PIN</label>
+      <input type="password" inputmode="numeric" id="pin" name="pin" required autocomplete="off" autofocus maxlength="12">
+      <button type="submit">Unlock</button>
+    </form>
+    <div id="error-message" class="error-message" hidden></div>
+    <a class="back-link" href="/">&larr; Back to tracker</a>
+  </div>
+  <script>
+    const form = document.getElementById('pin-form');
+    const errorEl = document.getElementById('error-message');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.hidden = true;
+      const button = form.querySelector('button');
+      button.disabled = true;
+      try {
+        const pin = document.getElementById('pin').value;
+        const res = await fetch('/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        if (res.ok) {
+          location.href = '/admin.html';
+        } else {
+          const data = await res.json().catch(() => ({}));
+          errorEl.textContent = data.error || 'Incorrect PIN';
+          errorEl.hidden = false;
+          document.getElementById('pin').value = '';
+          document.getElementById('pin').focus();
+        }
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
