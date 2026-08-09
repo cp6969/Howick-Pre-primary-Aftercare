@@ -54,7 +54,18 @@ const defaultSettings = {
   cutoff_time: '17:30',
   hourly_rate: '45',
   late_fee_per_block: '25',
-  currency: 'R'
+  currency: 'R',
+  // Automatic "today's log" email -- see mailer.js/scheduler.js. Recipients
+  // is a plain comma-separated string (no separate table needed for what's
+  // realistically a short, rarely-changing list). daily_log_last_sent_date
+  // is bookkeeping, not really a "setting" a person edits, but it lives here
+  // for the same reason session state lives in SQLite elsewhere in this app
+  // -- it has to survive a container restart so a restart right around 6pm
+  // can't cause a duplicate send.
+  daily_log_enabled: 'false',
+  daily_log_recipients: '',
+  daily_log_send_time: '18:00',
+  daily_log_last_sent_date: ''
 };
 const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 for (const [key, value] of Object.entries(defaultSettings)) insertSetting.run(key, value);

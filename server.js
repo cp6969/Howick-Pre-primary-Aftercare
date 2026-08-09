@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const SQLiteSessionStore = require('./session-store');
 
 const apiRouter = require('./api');
+const scheduler = require('./scheduler');
 
 const REQUIRED_ENV = ['SESSION_SECRET', 'APP_USERNAME', 'APP_PASSWORD_HASH'];
 const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
@@ -86,3 +87,7 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Howick aftercare tracker listening on port ${port}`);
 });
+
+// No-op every tick unless the daily-log email is turned on in Settings --
+// safe to always run.
+scheduler.startScheduler();

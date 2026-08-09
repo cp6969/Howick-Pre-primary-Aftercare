@@ -253,6 +253,40 @@
     </div>
   </section>
 
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Daily log email</h2>
+        <p>Automatically emails today's sign-in/sign-out log once <strong>every</strong> checked-in child has been collected — never before, and never a partial log.</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="field-error" id="smtpWarning" hidden style="margin-bottom:12px;">SMTP isn't configured on the server yet (SMTP_HOST/SMTP_USER/SMTP_PASS in .env) — this feature will save settings fine, but can't actually send until that's set up.</div>
+
+      <form id="dailyLogForm" class="form-grid">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;">
+          <input type="checkbox" id="dailyLogEnabled" style="width:auto;" /> Send automatically every day
+        </label>
+        <div class="field-row">
+          <div class="field"><label for="dailyLogTime">Send time (24h)</label><input type="time" id="dailyLogTime" /></div>
+          <div class="field" style="flex:2;">
+            <label for="dailyLogRecipients">Recipient email(s)</label>
+            <input type="text" id="dailyLogRecipients" placeholder="admin@howickpreprimary.co.za, aftercare@howickpreprimary.co.za" />
+          </div>
+        </div>
+        <p class="field-hint">Checked every minute from the send time onward — if not everyone's been collected yet at 18:00, it keeps waiting and sends the moment the last child is, whenever that is.</p>
+        <div class="field-error" id="dailyLogError" hidden></div>
+        <div class="submit-row"><button type="submit" class="btn btn-primary">Save daily log settings</button></div>
+      </form>
+
+      <div id="dailyLogStatus" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-soft);"></div>
+
+      <div class="submit-row" style="margin-top:12px;">
+        <button type="button" class="btn btn-purple" id="sendNowBtn">Send now</button>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -453,12 +487,83 @@
     location.href = '/login.html';
   });
 
+  // ---------- daily log email ----------
+  function renderDailyLogStatus(status) {
+    const t = status.today;
+    let readyLine;
+    if (t.total === 0) readyLine = 'No one has been checked in today yet.';
+    else if (t.ready) readyLine = `<strong>Ready to send</strong> — all ${t.total} checked in today have been collected.`;
+    else readyLine = `<strong>Not ready</strong> — ${t.collected} of ${t.total} collected, ${t.awaiting} still awaiting pickup.`;
+
+    const sentLine = status.last_sent_date === t.date
+      ? `Already sent today's log (${t.date}).`
+      : (status.last_sent_date ? `Last sent: ${status.last_sent_date}.` : 'Never sent yet.');
+
+    el('dailyLogStatus').innerHTML = `<div>${readyLine}</div><div style="margin-top:4px;">${sentLine}</div>`;
+    el('sendNowBtn').disabled = !t.ready || !status.smtp_configured;
+    el('sendNowBtn').textContent = !status.smtp_configured
+      ? 'Send now (SMTP not configured)'
+      : (t.ready ? 'Send now' : `Send now (${t.awaiting} awaiting pickup)`);
+  }
+
+  async function loadDailyLogStatus() {
+    const status = await api('/daily-log/status');
+    el('smtpWarning').hidden = status.smtp_configured;
+    el('dailyLogEnabled').checked = status.enabled;
+    el('dailyLogTime').value = status.send_time;
+    el('dailyLogRecipients').value = status.recipients;
+    renderDailyLogStatus(status);
+    return status;
+  }
+
+  el('dailyLogForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    el('dailyLogError').hidden = true;
+    try {
+      await api('/daily-log/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          enabled: el('dailyLogEnabled').checked,
+          send_time: el('dailyLogTime').value,
+          recipients: el('dailyLogRecipients').value
+        })
+      });
+      await loadDailyLogStatus();
+      showToast('Daily log settings saved.');
+    } catch (err) {
+      el('dailyLogError').textContent = err.message;
+      el('dailyLogError').hidden = false;
+    }
+  });
+
+  el('sendNowBtn').addEventListener('click', async () => {
+    el('sendNowBtn').disabled = true;
+    try {
+      const result = await api('/daily-log/send-now', { method: 'POST' });
+      if (result.sent) {
+        showToast(`Sent today's log to the configured recipient(s).`);
+      } else {
+        const reasons = {
+          no_recipients: 'No recipient email addresses are configured yet.',
+          awaiting_pickups: `Can't send — ${result.awaiting} child${result.awaiting === 1 ? '' : 'ren'} still awaiting pickup.`,
+          no_attendance: 'No one has been checked in today yet.',
+          send_failed: 'Sending failed: ' + (result.error || 'unknown error')
+        };
+        showToast(reasons[result.reason] || ('Not sent: ' + result.reason), true);
+      }
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      await loadDailyLogStatus();
+    }
+  });
+
   // ---------- init ----------
   (async function init() {
     try {
       state.groups = await api('/groups');
       populateGroupSelects();
-      await Promise.all([loadChildren(), loadSettings()]);
+      await Promise.all([loadChildren(), loadSettings(), loadDailyLogStatus()]);
     } catch (err) {
       showToast(err.message, true);
     }

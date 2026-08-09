@@ -1,6 +1,10 @@
 const express = require('express');
 const db = require('./db');
-const { todaySAST, nowMs, sastDateTimeMs, sastArrivalMs, GROUPS } = db;
+const { todaySAST, nowMs, sastArrivalMs, GROUPS } = db;
+const reports = require('./reports');
+const { getSettings, attendanceForDate, attendanceForRange, dayCollectionStatus, buildCsv } = reports;
+const mailer = require('./mailer');
+const scheduler = require('./scheduler');
 
 const router = express.Router();
 
@@ -15,23 +19,6 @@ function validGroupOrNull(group_name) {
   return { ok: false };
 }
 
-function getSettings() {
-  const rows = db.prepare('SELECT key, value FROM settings').all();
-  const out = {};
-  for (const r of rows) out[r.key] = r.value;
-  return out;
-}
-
-function cutoffMsFor(dateStr, settings) {
-  const [hh, mm] = (settings.cutoff_time || '17:30').split(':').map(Number);
-  return sastDateTimeMs(dateStr, hh, mm);
-}
-
-function fmtSastTime(ms) {
-  if (ms == null) return null;
-  return new Date(ms + 2 * 60 * 60 * 1000).toISOString().slice(11, 16);
-}
-
 function serializeChild(row) {
   return {
     id: row.id,
@@ -43,38 +30,6 @@ function serializeChild(row) {
     active: !!row.active
   };
 }
-
-function serializeAttendanceRow(row, settings) {
-  const cutoff = cutoffMsFor(row.date, settings);
-  const collected = row.collected_at != null;
-  let status;
-  if (collected) status = 'collected';
-  else if (nowMs() > cutoff) status = 'late';
-  else status = 'checked_in';
-
-  return {
-    id: row.id,
-    child_id: row.child_id,
-    date: row.date,
-    full_name: row.full_name,
-    group_name: row.group_name,
-    parent_name: row.parent_name,
-    checked_in_at: row.checked_in_at,
-    checked_in_time: fmtSastTime(row.checked_in_at),
-    collected_at: row.collected_at,
-    collected_time: fmtSastTime(row.collected_at),
-    collected_by: row.collected_by,
-    notes: row.notes,
-    status,
-    late_collection: collected && row.collected_at > cutoff
-  };
-}
-
-const ATTENDANCE_JOIN = `
-  SELECT a.*, c.full_name, c.group_name, c.parent_name
-  FROM attendance a
-  JOIN children c ON c.id = a.child_id
-`;
 
 // ---------- groups ----------
 
@@ -152,10 +107,7 @@ router.post('/children/:id/restore', (req, res) => {
 // ---------- attendance ----------
 
 router.get('/attendance/today', (req, res) => {
-  const settings = getSettings();
-  const date = todaySAST();
-  const rows = db.prepare(`${ATTENDANCE_JOIN} WHERE a.date = ? ORDER BY a.checked_in_at ASC`).all(date);
-  res.json(rows.map(r => serializeAttendanceRow(r, settings)));
+  res.json(attendanceForDate(todaySAST()));
 });
 
 router.post('/attendance/check-in', (req, res) => {
@@ -168,9 +120,8 @@ router.post('/attendance/check-in', (req, res) => {
   const date = todaySAST();
   const existing = db.prepare('SELECT * FROM attendance WHERE child_id = ? AND date = ?').get(child_id, date);
   if (existing) {
-    const settings = getSettings();
-    const row = db.prepare(`${ATTENDANCE_JOIN} WHERE a.id = ?`).get(existing.id);
-    return res.status(200).json(serializeAttendanceRow(row, settings));
+    const row = attendanceForDate(date).find(r => r.id === existing.id);
+    return res.status(200).json(row);
   }
 
   const now = nowMs();
@@ -179,9 +130,8 @@ router.post('/attendance/check-in', (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(child_id, date, sastArrivalMs(date), now, now);
 
-  const settings = getSettings();
-  const row = db.prepare(`${ATTENDANCE_JOIN} WHERE a.id = ?`).get(result.lastInsertRowid);
-  res.status(201).json(serializeAttendanceRow(row, settings));
+  const row = attendanceForDate(date).find(r => r.id === result.lastInsertRowid);
+  res.status(201).json(row);
 });
 
 router.post('/attendance/:id/collect', (req, res) => {
@@ -196,20 +146,20 @@ router.post('/attendance/:id/collect', (req, res) => {
     UPDATE attendance SET collected_at = ?, collected_by = ?, updated_at = ? WHERE id = ?
   `).run(collectedAt, collected_by.trim(), nowMs(), req.params.id);
 
-  const settings = getSettings();
-  const row = db.prepare(`${ATTENDANCE_JOIN} WHERE a.id = ?`).get(req.params.id);
-  res.json(serializeAttendanceRow(row, settings));
+  const row = attendanceForDate(existing.date).find(r => r.id === existing.id);
+  res.json(row);
 });
 
 router.post('/attendance/:id/uncollect', (req, res) => {
-  const result = db.prepare(`
+  const existing = db.prepare('SELECT * FROM attendance WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Attendance record not found' });
+
+  db.prepare(`
     UPDATE attendance SET collected_at = NULL, collected_by = NULL, updated_at = ? WHERE id = ?
   `).run(nowMs(), req.params.id);
-  if (!result.changes) return res.status(404).json({ error: 'Attendance record not found' });
 
-  const settings = getSettings();
-  const row = db.prepare(`${ATTENDANCE_JOIN} WHERE a.id = ?`).get(req.params.id);
-  res.json(serializeAttendanceRow(row, settings));
+  const row = attendanceForDate(existing.date).find(r => r.id === existing.id);
+  res.json(row);
 });
 
 router.delete('/attendance/:id', (req, res) => {
@@ -223,7 +173,7 @@ router.delete('/attendance/:id', (req, res) => {
 router.get('/stats/today', (req, res) => {
   const settings = getSettings();
   const date = todaySAST();
-  const todayRows = db.prepare(`${ATTENDANCE_JOIN} WHERE a.date = ?`).all(date).map(r => serializeAttendanceRow(r, settings));
+  const todayRows = attendanceForDate(date);
 
   const checkedInToday = todayRows.length;
   const awaitingPickup = todayRows.filter(r => r.status !== 'collected').length;
@@ -235,11 +185,8 @@ router.get('/stats/today', (req, res) => {
 
   // Late collections over the trailing 7 days (including today).
   const weekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const weekRows = db.prepare(`${ATTENDANCE_JOIN} WHERE a.date >= ? AND a.collected_at IS NOT NULL`).all(weekAgo);
-  const lateThisWeek = weekRows.filter(r => {
-    const cutoff = cutoffMsFor(r.date, settings);
-    return r.collected_at > cutoff;
-  }).length;
+  const weekRows = attendanceForRange(weekAgo, date).filter(r => r.collected_at != null);
+  const lateThisWeek = weekRows.filter(r => r.late_collection).length;
 
   res.json({
     date,
@@ -247,7 +194,12 @@ router.get('/stats/today', (req, res) => {
     awaiting_pickup: awaitingPickup,
     collected_today: collectedToday,
     avg_stay_minutes: avgStayMs != null ? Math.round(avgStayMs / 60000) : null,
-    late_collections_7d: lateThisWeek
+    late_collections_7d: lateThisWeek,
+    // Powers both the manual "Export today's log" button (index.html) and
+    // is re-derived independently by the daily-log scheduler -- this flag
+    // is informational for the UI, never trusted as the actual gate on the
+    // server side (see dayCollectionStatus / attemptDailySend).
+    ready_to_export: checkedInToday > 0 && awaitingPickup === 0
   });
 });
 
@@ -256,35 +208,11 @@ router.get('/stats/today', (req, res) => {
 router.get('/attendance/export.csv', (req, res) => {
   const from = req.query.from || todaySAST();
   const to = req.query.to || from;
-  const settings = getSettings();
-
-  const rows = db.prepare(`
-    ${ATTENDANCE_JOIN} WHERE a.date BETWEEN ? AND ? ORDER BY a.date ASC, c.full_name ASC
-  `).all(from, to).map(r => serializeAttendanceRow(r, settings));
-
-  const header = ['Date', 'Child Name', 'Group', 'Parent / Guardian', 'Arrival Time', 'Collection Time', 'Collected By', 'Late Pickup?'];
-  const csvEscape = (v) => {
-    if (v == null) return '';
-    const s = String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const lines = [header.join(',')];
-  for (const r of rows) {
-    lines.push([
-      r.date,
-      r.full_name,
-      r.group_name || '',
-      r.parent_name || '',
-      r.checked_in_time || '',
-      r.collected_time || '',
-      r.collected_by || '',
-      r.late_collection ? 'Late' : ''
-    ].map(csvEscape).join(','));
-  }
+  const csv = buildCsv(attendanceForRange(from, to));
 
   res.set('Content-Type', 'text/csv');
   res.set('Content-Disposition', `attachment; filename="aftercare-attendance-${from}_to_${to}.csv"`);
-  res.send(lines.join('\n'));
+  res.send(csv);
 });
 
 // ---------- settings ----------
@@ -300,6 +228,52 @@ router.put('/settings', (req, res) => {
     if (req.body && req.body[key] !== undefined) update.run(key, String(req.body[key]));
   }
   res.json(getSettings());
+});
+
+// ---------- daily log email ----------
+// Automatically emails "today's log" once every checked-in child has been
+// collected, checked every minute from the configured send time onward
+// (see scheduler.js) -- never before everyone's collected, and never twice
+// in one day. "Send now" (below) uses the exact same readiness check, just
+// bypassing the enabled/time/already-sent gates so it can be used to test
+// the email or to resend on demand.
+
+router.get('/daily-log/status', (req, res) => {
+  const settings = getSettings();
+  const date = todaySAST();
+  res.json({
+    enabled: settings.daily_log_enabled === 'true',
+    recipients: settings.daily_log_recipients || '',
+    send_time: settings.daily_log_send_time || '18:00',
+    last_sent_date: settings.daily_log_last_sent_date || '',
+    smtp_configured: mailer.configured(),
+    today: dayCollectionStatus(date)
+  });
+});
+
+router.put('/daily-log/settings', (req, res) => {
+  const { enabled, recipients, send_time } = req.body || {};
+
+  if (send_time !== undefined && !/^([01]?\d|2[0-3]):[0-5]\d$/.test(String(send_time).trim())) {
+    return res.status(400).json({ error: 'Send time must be in HH:MM 24-hour format, e.g. 18:00' });
+  }
+  let cleanedRecipients;
+  if (recipients !== undefined) {
+    cleanedRecipients = String(recipients).split(',').map(s => s.trim()).filter(Boolean);
+    const bad = cleanedRecipients.find(e => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (bad) return res.status(400).json({ error: `"${bad}" doesn't look like a valid email address` });
+  }
+
+  if (enabled !== undefined) reports.setSetting('daily_log_enabled', enabled ? 'true' : 'false');
+  if (cleanedRecipients !== undefined) reports.setSetting('daily_log_recipients', cleanedRecipients.join(', '));
+  if (send_time !== undefined) reports.setSetting('daily_log_send_time', String(send_time).trim());
+
+  res.json({ ok: true });
+});
+
+router.post('/daily-log/send-now', async (req, res) => {
+  const result = await scheduler.attemptDailySend({ force: true });
+  res.json(result);
 });
 
 module.exports = router;

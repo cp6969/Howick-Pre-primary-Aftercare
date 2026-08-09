@@ -127,6 +127,8 @@
   .btn-purple:hover { filter: brightness(1.08); }
   .btn-sm { padding: 7px 14px; font-size: 11.5px; }
   .btn[disabled] { opacity: 0.5; cursor: default; pointer-events: none; }
+  /* exportBtn is an <a>, which doesn't support the disabled attribute -- a class does the same job */
+  .btn-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
   /* ---------- Stat tiles ---------- */
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
@@ -471,7 +473,32 @@
     renderStats();
     renderRoster();
     renderPending();
+    renderExportButton();
     el('footerTag').textContent = 'Live · ' + state.stats.date;
+  }
+
+  // Only clickable once every child checked in today has actually been
+  // collected -- same rule the automatic 6pm email uses, kept in sync
+  // purely because both read state.stats.ready_to_export from the same
+  // /api/stats/today response, not because this duplicates server logic.
+  function renderExportButton() {
+    const btn = el('exportBtn');
+    const s = state.stats;
+    if (s.ready_to_export) {
+      btn.classList.remove('btn-disabled');
+      btn.removeAttribute('aria-disabled');
+      btn.href = '/api/attendance/export.csv?from=' + s.date + '&to=' + s.date;
+      btn.textContent = "Export today's log";
+      btn.title = '';
+    } else {
+      btn.classList.add('btn-disabled');
+      btn.setAttribute('aria-disabled', 'true');
+      btn.removeAttribute('href');
+      btn.textContent = s.checked_in_today
+        ? `Export today's log (${s.awaiting_pickup} awaiting pickup)`
+        : "Export today's log (no check-ins yet)";
+      btn.title = 'Available once every child checked in today has been collected.';
+    }
   }
 
   function renderStats() {
@@ -675,13 +702,7 @@
     }
   });
 
-  // ---------- export / logout ----------
-  el('exportBtn').addEventListener('click', () => {
-    const today = new Date();
-    const iso = today.toISOString().slice(0, 10);
-    el('exportBtn').href = '/api/attendance/export.csv?from=' + iso + '&to=' + iso;
-  });
-
+  // ---------- logout ----------
   el('logoutBtn').addEventListener('click', async () => {
     await fetch('/auth/logout', { method: 'POST' });
     location.href = '/login.html';
