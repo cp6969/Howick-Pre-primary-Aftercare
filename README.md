@@ -45,13 +45,42 @@ npm start
 Open `http://localhost:3000`, log in, and use **Manage children** to load the
 school roster (one at a time, or paste a whole list at once with **Bulk add**).
 
-### Deploying
+### Deploying on Unraid (LAN-only)
 
-`Dockerfile` + `docker-compose.yml` are set up the same way as the `13-Industries`
-Shipments Tracker repo — `docker compose up -d` builds and runs it, with the
-SQLite database persisted to `./data`. Put a reverse proxy (Cloudflare Tunnel,
-nginx, etc.) in front of it for a real URL; see the Shipments Tracker repo's
-compose file for a worked Cloudflare Tunnel example.
+Mirrors the Shipments Tracker's setup on the same box, on port `8090` (`8088` is
+Immich, `8089` is the Shipments Tracker). That Unraid install doesn't have the
+`docker compose` plugin, so this uses plain `docker run` — `docker-compose.yml`
+describes the same thing if you ever install the Compose Manager plugin.
+
+```bash
+cd /mnt/user/appdata/           # or wherever you keep these
+git clone https://github.com/cp6969/Howick-Pre-primary-Aftercare.git howick-aftercare
+cd howick-aftercare
+
+cp .env.example .env
+# edit .env: fill in APP_USERNAME, APP_PASSWORD_HASH, SESSION_SECRET
+# (leave TUNNEL_TOKEN blank -- not needed for LAN-only)
+
+docker build -t howick-aftercare:latest .
+
+docker run -d --name howick-aftercare-tracker \
+  --env-file .env -v "$(pwd)/data:/app/data" -p 8090:3000 \
+  --restart unless-stopped howick-aftercare:latest
+```
+
+Visit `http://<unraid-ip>:8090`, log in, and use **Manage children** to load
+the roster.
+
+### Going public later
+
+When you're ready for a real URL, the plan is a subdomain of
+`howickpreprimary.co.za` (e.g. `aftercare.howickpreprimary.co.za`) — that only
+works once that domain's DNS is managed in Cloudflare (either you or the school
+would need access to set that up, the same way `13industries.co.za` was moved
+to Cloudflare for the Shipments Tracker). Once that's sorted, `docker-compose.yml`
+already has an optional `cloudflared` service ready to go — create a tunnel in
+the Cloudflare Zero Trust dashboard, put its token in `.env` as `TUNNEL_TOKEN`,
+and add a published application route pointing at `app:3000`.
 
 ## Data model
 
