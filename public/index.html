@@ -32,8 +32,8 @@
   .masthead .tagline { margin: 4px 0 0; color: var(--ink-soft); font-size: 13.5px; letter-spacing: 0.01em; }
   .masthead-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-soft); flex-wrap: wrap; }
   .masthead-meta .date { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); font-size: 14px; }
-  .icon-btn { width: 36px; height: 36px; padding: 0; justify-content: center; }
-  .icon-btn svg { width: 18px; height: 18px; }
+  .icon-btn { width: 38px; height: 38px; padding: 0; justify-content: center; color: var(--ink); }
+  .icon-btn svg { width: 20px; height: 20px; display: block; }
 
   .scallop {
     height: 14px; background-color: var(--paper);
@@ -335,7 +335,7 @@
 (function () {
   'use strict';
 
-  const state = { children: [], today: [], settings: {}, stats: {} };
+  const state = { children: [], today: [], stats: {} };
 
   const el = (id) => document.getElementById(id);
   const AVATAR_CLASSES = ['a-0', 'a-1', 'a-2', 'a-3', 'a-4'];
@@ -405,16 +405,14 @@
 
   // ---------- data load ----------
   async function loadAll() {
-    const [children, today, stats, settings] = await Promise.all([
+    const [children, today, stats] = await Promise.all([
       api('/children'),
       api('/attendance/today'),
-      api('/stats/today'),
-      api('/settings')
+      api('/stats/today')
     ]);
     state.children = children;
     state.today = today;
     state.stats = stats;
-    state.settings = settings;
     render();
   }
 
