@@ -7,8 +7,21 @@ services:
     volumes:
       - ./data:/app/data
     ports:
-      # Reach the app directly on the LAN at http://<server-ip>:8089
-      # Put a reverse proxy (Cloudflare Tunnel, nginx, etc.) in front of this
-      # for a public URL — see the Shipments Tracker repo's compose file for
-      # a worked example if you want the same cloudflared setup here too.
-      - "8089:3000"
+      # 8088 = Immich, 8089 = Shipments Tracker on this box (see that repo's
+      # handover doc) -- 8090 is the next free port for this app.
+      # Reach it directly on the LAN at http://<unraid-ip>:8090
+      - "8090:3000"
+
+  # Optional -- gives this app its own public URL via Cloudflare Tunnel,
+  # completely independent of the Shipments Tracker's tunnel (nothing here
+  # touches that app's containers). Remove this service (and use nginx, or
+  # just LAN access above) if you don't want a second cloudflared container.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: howick-aftercare-cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - app
