@@ -20,7 +20,7 @@ router.get('/settings', (req, res) => {
 });
 
 router.put('/settings', (req, res) => {
-  const allowed = ['cutoff_time', 'hourly_rate', 'late_fee_per_block', 'currency'];
+  const allowed = ['cutoff_time', 'hourly_rate', 'daily_minimum_hours', 'late_fee_per_block', 'currency'];
   for (const key of allowed) {
     if (req.body && req.body[key] !== undefined) reports.setSetting(key, req.body[key]);
   }

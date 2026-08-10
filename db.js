@@ -53,6 +53,9 @@ db.exec(`
 const defaultSettings = {
   cutoff_time: '17:30',
   hourly_rate: '45',
+  // Matches the billing workbook's "Daily minimum billed hours" (Rates &
+  // Settings!B6) -- even a short stay bills at least this many hours.
+  daily_minimum_hours: '1',
   late_fee_per_block: '25',
   currency: 'R',
   // Automatic "today's log" email -- see mailer.js/scheduler.js. Recipients

@@ -63,8 +63,7 @@
   .field-row .field { flex: 1; min-width: 160px; }
   .form-grid { display: flex; flex-direction: column; gap: 12px; }
   .field-error { font-size: 12px; color: var(--brand-coral); margin-top: -4px; }
-  .settings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  @media (max-width: 720px) { .settings-grid { grid-template-columns: repeat(2, 1fr); } }
+  .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 
   .search-row { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); flex-wrap: wrap; }
   .search-row input[type="month"], .search-row input[type="text"], .search-row select { font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
@@ -140,7 +139,8 @@
         <div class="settings-grid">
           <div class="field"><label for="cutoffTime">Collection cutoff</label><input type="time" id="cutoffTime" /></div>
           <div class="field"><label for="hourlyRate">Hourly rate</label><input type="number" step="0.01" min="0" id="hourlyRate" /></div>
-          <div class="field"><label for="lateFee">Late fee per block</label><input type="number" step="0.01" min="0" id="lateFee" /></div>
+          <div class="field"><label for="dailyMinHours">Daily minimum hours</label><input type="number" step="0.25" min="0" id="dailyMinHours" /></div>
+          <div class="field"><label for="lateFee">Late fee per 15-min block</label><input type="number" step="0.01" min="0" id="lateFee" /></div>
           <div class="field"><label for="currency">Currency symbol</label><input type="text" id="currency" maxlength="4" /></div>
         </div>
         <div class="field-error" id="settingsError" hidden></div>
@@ -165,7 +165,7 @@
     </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Child</th><th>Group</th><th>Days this month</th><th></th></tr></thead>
+        <thead><tr><th>Child</th><th>Group</th><th>Days this month</th><th>Cost this month</th><th></th></tr></thead>
         <tbody id="tallyBody"></tbody>
       </table>
       <div class="empty-state" id="tallyEmpty" hidden>No children on the roster yet.</div>
@@ -187,7 +187,7 @@
     <div class="modal-body">
       <div class="table-scroll">
         <table>
-          <thead><tr><th>Date</th><th>Arrival</th><th>Collection</th><th>Collected by</th><th></th></tr></thead>
+          <thead><tr><th>Date</th><th>Arrival</th><th>Collection</th><th>Collected by</th><th>Cost</th><th></th></tr></thead>
           <tbody id="historyBody"></tbody>
         </table>
       </div>
@@ -203,7 +203,7 @@
 (function () {
   'use strict';
 
-  const state = { tally: [] };
+  const state = { tally: [], currency: 'R' };
   const el = (id) => document.getElementById(id);
 
   function escapeHtml(s) {
@@ -213,6 +213,19 @@
     if (!group) return '<span class="group-chip empty">—</span>';
     const c = (window.GROUP_COLORS && window.GROUP_COLORS[group]) || window.GROUP_COLOR_FALLBACK;
     return `<span class="group-chip" style="background:${c.tint};color:${c.text}">${escapeHtml(group)}</span>`;
+  }
+  function fmtMoney(amount) {
+    return state.currency + ' ' + (Number(amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Plain /api/* (site-login only, not Admin-PIN-gated) -- for the group
+  // list, which isn't a billing rate and is already readable elsewhere
+  // (e.g. Settings page uses the same route).
+  async function siteApi(path) {
+    const res = await fetch('/api' + path);
+    if (res.status === 401) { location.href = '/login.html'; throw new Error('Not authenticated'); }
+    if (!res.ok) throw new Error('Request failed');
+    return res.json();
   }
 
   async function api(path, opts) {
@@ -246,8 +259,10 @@
     const s = await api('/settings');
     el('cutoffTime').value = s.cutoff_time || '';
     el('hourlyRate').value = s.hourly_rate || '';
+    el('dailyMinHours').value = s.daily_minimum_hours || '';
     el('lateFee').value = s.late_fee_per_block || '';
     el('currency').value = s.currency || '';
+    state.currency = s.currency || 'R';
   }
 
   el('settingsForm').addEventListener('submit', async (e) => {
@@ -259,16 +274,25 @@
         body: JSON.stringify({
           cutoff_time: el('cutoffTime').value,
           hourly_rate: el('hourlyRate').value,
+          daily_minimum_hours: el('dailyMinHours').value,
           late_fee_per_block: el('lateFee').value,
           currency: el('currency').value
         })
       });
+      state.currency = el('currency').value || 'R';
+      renderTally();
       showToast('Settings saved.');
     } catch (err) {
       el('settingsError').textContent = err.message;
       el('settingsError').hidden = false;
     }
   });
+
+  // ---------- groups (for the tally filter) ----------
+  async function loadGroups() {
+    const groups = await siteApi('/groups');
+    el('tallyGroupFilter').innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+  }
 
   // ---------- monthly tally ----------
   function currentMonth() {
@@ -280,19 +304,7 @@
     const all = el('showArchived').checked ? '1' : '0';
     const result = await api(`/children-tally?month=${encodeURIComponent(month)}&all=${all}`);
     state.tally = result.children;
-    syncGroupFilterOptions();
     renderTally();
-  }
-
-  // Keeps the group dropdown's options in sync with whatever groups actually
-  // appear in the current roster/month, without clobbering the user's
-  // current selection if it's still valid.
-  function syncGroupFilterOptions() {
-    const select = el('tallyGroupFilter');
-    const current = select.value;
-    const groups = Array.from(new Set(state.tally.map(c => c.group_name).filter(Boolean))).sort();
-    select.innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
-    if (groups.includes(current)) select.value = current;
   }
 
   function renderTally() {
@@ -309,6 +321,7 @@
         <td>${escapeHtml(c.full_name)}</td>
         <td>${groupChipHtml(c.group_name)}</td>
         <td><span class="tally-count">${c.days_this_month}</span></td>
+        <td><span class="tally-count">${fmtMoney(c.cost_this_month)}</span></td>
         <td><button class="row-action" data-history="${c.id}" data-name="${escapeHtml(c.full_name)}">View log</button></td>
       </tr>
     `).join('');
@@ -362,6 +375,7 @@
           <td>${r.checked_in_time || '—'}</td>
           <td>${r.collected_time || '—'}</td>
           <td>${escapeHtml(r.collected_by || '—')}</td>
+          <td>${fmtMoney(r.total_cost)}</td>
           <td>${r.late_collection ? '<span class="late-tag">Late</span>' : ''}</td>
         </tr>
       `).join('');
@@ -385,7 +399,8 @@
   (async function init() {
     el('monthPicker').value = currentMonth();
     try {
-      await Promise.all([loadSettings(), loadTally()]);
+      await loadSettings();
+      await Promise.all([loadGroups(), loadTally()]);
     } catch (err) {
       showToast(err.message, true);
     }
