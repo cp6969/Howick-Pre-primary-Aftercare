@@ -75,7 +75,7 @@ app.get('/login.html', (req, res) => {
 // instead would also expose index.html/settings.html unauthenticated, so
 // this stays an explicit, narrow allowlist rather than moving the general
 // express.static mount above the auth gate.
-const PUBLIC_ASSETS = ['fonts.css', 'theme.css', 'group-colors.js'];
+const PUBLIC_ASSETS = ['fonts.css', 'theme.css', 'group-colors.js', 'logo.png'];
 for (const file of PUBLIC_ASSETS) {
   app.get('/' + file, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', file));

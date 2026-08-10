@@ -19,12 +19,7 @@
     display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
   }
   .masthead-id { display: flex; align-items: center; gap: 14px; }
-  .badge-mark {
-    width: 48px; height: 48px; border-radius: 50%;
-    background: linear-gradient(155deg, var(--brand-green) 0%, var(--brand-green-deep) 100%);
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-weight: 700; font-size: 20px; flex-shrink: 0; box-shadow: var(--shadow);
-  }
+  .badge-mark { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
   .wordmark { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 3vw, 25px); line-height: 1.05; letter-spacing: -0.01em; }
   .wordmark .w-howick { color: var(--brand-green); }
   .wordmark .w-sub { display: block; font-family: var(--font-display); font-weight: 500; font-size: 13px; color: var(--brand-blue); letter-spacing: 0.01em; margin-top: 1px; }
@@ -109,7 +104,7 @@
 <div class="masthead-outer">
   <header class="masthead">
     <div class="masthead-id">
-      <div class="badge-mark">H</div>
+      <img class="badge-mark" src="/logo.png" alt="Howick Pre-Primary &amp; Baby Centre logo" />
       <div>
         <div class="wordmark"><span class="w-howick">Howick</span><span class="w-sub">Settings</span></div>
       </div>
