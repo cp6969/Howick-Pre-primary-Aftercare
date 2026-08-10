@@ -29,7 +29,7 @@ ever see references to `13-Industries` in old conversation history, that's why.
   user a copy-paste runbook in chat (also in `README.md`). **Unconfirmed
   whether they've actually run it yet** — that's the natural next thing to
   check in on if picking this up.
-- Decided explicitly: **LAN-only for now** (`http://<unraid-ip>:8090`). Public
+- Decided explicitly: **LAN-only for now** (`http://<unraid-ip>:8092`). Public
   URL is planned for later on a `howickpreprimary.co.za` subdomain, but that's
   blocked on confirming someone (the user or the school) actually manages that
   domain's DNS in Cloudflare — not yet confirmed.
@@ -130,12 +130,13 @@ Worth knowing so they don't get reintroduced:
    `hidden` attribute, make sure it doesn't have its own explicit `display`
    override fighting this** — the global rule should cover it, but worth
    knowing why it's there.
-3. **Port collision caught before deployment, not after**: `docker-compose.yml`
-   originally guessed port 8089 was free on the Unraid box. The Shipments
-   Tracker's own handover doc (`13-Industries/Shipments-Tracker-Handover.md`)
-   says 8089 is *already* that app's port (8088 is Immich) — moved this app to
-   **8090** instead. If deploying a third app to the same box later, check
-   what's actually running (`docker ps`) rather than guessing again.
+3. **Port collision, twice**: `docker-compose.yml` originally guessed port 8089
+   was free on the Unraid box. The Shipments Tracker's own handover doc
+   (`13-Industries/Shipments-Tracker-Handover.md`) says 8089 is *already* that
+   app's port (8088 is Immich) — moved this app to 8090. That also turned out
+   to be taken by something else on the box, so it moved again to **8092**,
+   which is what's actually deployed. If deploying a third app to the same box
+   later, check what's actually running (`docker ps`) rather than guessing.
 
 ## 7. Deploying (LAN-only, not yet confirmed run)
 
@@ -159,7 +160,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"        
 ## 8. Outstanding / next steps
 
 - **Confirm the Unraid deployment actually happened and works** — visit
-  `http://<unraid-ip>:8090`, log in, run through Roll Call → Collect once for
+  `http://<unraid-ip>:8092`, log in, run through Roll Call → Collect once for
   real. This is the most likely next ask.
 - **Public URL**: blocked on confirming Cloudflare DNS access to
   `howickpreprimary.co.za`. Once that's sorted, `docker-compose.yml` already

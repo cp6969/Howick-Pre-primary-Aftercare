@@ -8,9 +8,10 @@ services:
       - ./data:/app/data
     ports:
       # 8088 = Immich, 8089 = Shipments Tracker on this box (see that repo's
-      # handover doc) -- 8090 is the next free port for this app.
-      # Reach it directly on the LAN at http://<unraid-ip>:8090
-      - "8090:3000"
+      # handover doc). 8090 turned out to already be taken by something else
+      # on this box, so this app actually lives on 8092.
+      # Reach it directly on the LAN at http://<unraid-ip>:8092
+      - "8092:3000"
 
   # Optional -- gives this app its own public URL via Cloudflare Tunnel,
   # completely independent of the Shipments Tracker's tunnel (nothing here
