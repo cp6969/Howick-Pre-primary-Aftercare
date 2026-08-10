@@ -51,10 +51,12 @@ school roster (one at a time, or paste a whole list at once with **Bulk add**).
 
 ### Deploying on Unraid (LAN-only)
 
-Mirrors the Shipments Tracker's setup on the same box, on port `8090` (`8088` is
-Immich, `8089` is the Shipments Tracker). That Unraid install doesn't have the
-`docker compose` plugin, so this uses plain `docker run` — `docker-compose.yml`
-describes the same thing if you ever install the Compose Manager plugin.
+Mirrors the Shipments Tracker's setup on the same box (`8088` is Immich, `8089`
+is the Shipments Tracker). `8090` turned out to already be taken by something
+else on this box, so this app actually runs on **`8092`**. That Unraid install
+doesn't have the `docker compose` plugin, so this uses plain `docker run` —
+`docker-compose.yml` describes the same thing if you ever install the Compose
+Manager plugin.
 
 ```bash
 cd /mnt/user/appdata/           # or wherever you keep these
@@ -68,11 +70,11 @@ cp .env.example .env
 docker build -t howick-aftercare:latest .
 
 docker run -d --name howick-aftercare-tracker \
-  --env-file .env -v "$(pwd)/data:/app/data" -p 8090:3000 \
+  --env-file .env -v "$(pwd)/data:/app/data" -p 8092:3000 \
   --restart unless-stopped howick-aftercare:latest
 ```
 
-Visit `http://<unraid-ip>:8090`, log in, and use **Manage children** to load
+Visit `http://<unraid-ip>:8092`, log in, and use **Manage children** to load
 the roster.
 
 ### Public URL
@@ -80,7 +82,7 @@ the roster.
 Live at **https://hpps.burgtec.co.za**, via the optional `cloudflared` service
 in `docker-compose.yml` (a tunnel created in the Cloudflare Zero Trust
 dashboard, its token in `.env` as `TUNNEL_TOKEN`, with a published application
-route pointing at `app:3000`). LAN access on port `8090` still works as a
+route pointing at `app:3000`). LAN access on port `8092` still works as a
 fallback if the tunnel is down.
 
 If the school later gets its own domain onto Cloudflare, this can move to a
