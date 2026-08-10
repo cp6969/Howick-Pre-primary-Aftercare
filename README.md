@@ -4,6 +4,10 @@ A working aftercare sign-in/sign-out tracker for Howick Pre-Primary & Baby Centr
 styled to the school's actual site branding (colors, Jost/Open Sans typefaces, logo
 palette).
 
+Picking this up fresh (new session, new machine, handing off to someone else)?
+Read [`HANDOVER.md`](HANDOVER.md) first — it has the full history, the
+decisions already made, and what's still outstanding.
+
 ## What's here
 
 - **The app** (`server.js`, `api.js`, `db.js`, `public/`) — a small self-hosted
