@@ -75,16 +75,17 @@ docker run -d --name howick-aftercare-tracker \
 Visit `http://<unraid-ip>:8090`, log in, and use **Manage children** to load
 the roster.
 
-### Going public later
+### Public URL
 
-When you're ready for a real URL, the plan is a subdomain of
-`howickpreprimary.co.za` (e.g. `aftercare.howickpreprimary.co.za`) — that only
-works once that domain's DNS is managed in Cloudflare (either you or the school
-would need access to set that up, the same way `13industries.co.za` was moved
-to Cloudflare for the Shipments Tracker). Once that's sorted, `docker-compose.yml`
-already has an optional `cloudflared` service ready to go — create a tunnel in
-the Cloudflare Zero Trust dashboard, put its token in `.env` as `TUNNEL_TOKEN`,
-and add a published application route pointing at `app:3000`.
+Live at **https://hpps.burgtec.co.za**, via the optional `cloudflared` service
+in `docker-compose.yml` (a tunnel created in the Cloudflare Zero Trust
+dashboard, its token in `.env` as `TUNNEL_TOKEN`, with a published application
+route pointing at `app:3000`). LAN access on port `8090` still works as a
+fallback if the tunnel is down.
+
+If the school later gets its own domain onto Cloudflare, this can move to a
+subdomain of `howickpreprimary.co.za` (e.g. `aftercare.howickpreprimary.co.za`)
+by swapping the route in the same tunnel — no app changes needed.
 
 ## Data model
 
@@ -99,5 +100,4 @@ and add a published application route pointing at `app:3000`.
   the API for the "late collection" flag and available for a future billing
   calculator; not yet exposed in the UI.
 
-Not a live system in the sense of being deployed anywhere yet — but it's a real
-app with a real database, ready to run.
+Live and running on the school's Unraid box at https://hpps.burgtec.co.za.
