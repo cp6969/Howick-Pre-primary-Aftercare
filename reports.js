@@ -1,5 +1,5 @@
 const db = require('./db');
-const { nowMs, sastDateTimeMs } = db;
+const { nowMs, sastDateTimeMs, todaySAST } = db;
 
 // Shared between api.js (the /attendance/* routes) and scheduler.js (the
 // automatic 6pm email) so "is today's log ready" and "what does the CSV
@@ -34,6 +34,39 @@ const ATTENDANCE_JOIN = `
   JOIN children c ON c.id = a.child_id
 `;
 
+const MS_PER_HOUR = 60 * 60 * 1000;
+const BLOCK_MS = 15 * 60 * 1000;
+
+// Mirrors the billing workbook's math (Rates & Settings -> Daily Log ->
+// Billing Summary), except the spreadsheet can't know exact late minutes
+// (no live timestamps to read), so it charges a flat 4-block placeholder
+// per late day. This app has the real collected_at, so it charges the
+// actual number of 15-minute blocks (or part thereof) past cutoff, per
+// Rates & Settings' own description of the fee ("Charged for each 15-minute
+// block (or part thereof) past the cutoff").
+//
+// An attendance row still open (no collected_at yet) is billed as running
+// to "now" if it's today's row -- that's what makes the Admin tally a live
+// running total instead of a snapshot -- but a stale, never-collected past
+// day is capped at the cutoff instead of accruing forever.
+function costForRow(row, settings) {
+  const hourlyRate = Number(settings.hourly_rate) || 0;
+  const minHours = Number(settings.daily_minimum_hours) || 0;
+  const lateFeePerBlock = Number(settings.late_fee_per_block) || 0;
+  const cutoff = cutoffMsFor(row.date, settings);
+  const endMs = row.collected_at != null ? row.collected_at : (row.date === todaySAST() ? nowMs() : cutoff);
+
+  const durationHours = Math.max(0, endMs - row.checked_in_at) / MS_PER_HOUR;
+  const billedHours = Math.max(durationHours, minHours);
+  const baseCharge = billedHours * hourlyRate;
+
+  const lateMs = Math.max(0, endMs - cutoff);
+  const lateBlocks = lateMs > 0 ? Math.ceil(lateMs / BLOCK_MS) : 0;
+  const lateFee = lateBlocks * lateFeePerBlock;
+
+  return { billed_hours: billedHours, base_charge: baseCharge, late_blocks: lateBlocks, late_fee: lateFee, total: baseCharge + lateFee };
+}
+
 function serializeAttendanceRow(row, settings) {
   const cutoff = cutoffMsFor(row.date, settings);
   const collected = row.collected_at != null;
@@ -41,6 +74,8 @@ function serializeAttendanceRow(row, settings) {
   if (collected) status = 'collected';
   else if (nowMs() > cutoff) status = 'late';
   else status = 'checked_in';
+
+  const cost = costForRow(row, settings);
 
   return {
     id: row.id,
@@ -56,7 +91,10 @@ function serializeAttendanceRow(row, settings) {
     collected_by: row.collected_by,
     notes: row.notes,
     status,
-    late_collection: collected && row.collected_at > cutoff
+    late_collection: collected && row.collected_at > cutoff,
+    base_charge: cost.base_charge,
+    late_fee: cost.late_fee,
+    total_cost: cost.total
   };
 }
 
@@ -108,24 +146,35 @@ function monthDateRange(yearMonth) {
 }
 
 // One row per child (active only by default) with how many days of
-// aftercare they attended in the given month -- the Admin page's monthly
-// tally, one query per month rather than pulling every attendance row and
-// counting client-side.
+// aftercare they attended in the given month, and a running cost tally
+// (base charges + late fees, see costForRow) -- the Admin page's monthly
+// tally. Reads each attendance row once and aggregates both figures
+// client-side in JS rather than a second SQL pass, since the cost math
+// needs settings + per-row cutoff logic SQL can't express.
 function monthlyTallyForAllChildren(yearMonth, { includeArchived } = {}) {
   const { from, to } = monthDateRange(yearMonth);
+  const settings = getSettings();
   const children = db.prepare(
     includeArchived
       ? 'SELECT id, full_name, group_name, active FROM children ORDER BY full_name'
       : 'SELECT id, full_name, group_name, active FROM children WHERE active = 1 ORDER BY full_name'
   ).all();
-  const tallyRows = db.prepare('SELECT child_id, COUNT(*) AS days FROM attendance WHERE date BETWEEN ? AND ? GROUP BY child_id').all(from, to);
-  const tallyByChild = new Map(tallyRows.map(r => [r.child_id, r.days]));
+  const attendanceRows = db.prepare('SELECT child_id, date, checked_in_at, collected_at FROM attendance WHERE date BETWEEN ? AND ?').all(from, to);
+
+  const daysByChild = new Map();
+  const costByChild = new Map();
+  for (const row of attendanceRows) {
+    daysByChild.set(row.child_id, (daysByChild.get(row.child_id) || 0) + 1);
+    costByChild.set(row.child_id, (costByChild.get(row.child_id) || 0) + costForRow(row, settings).total);
+  }
+
   return children.map(c => ({
     id: c.id,
     full_name: c.full_name,
     group_name: c.group_name,
     active: !!c.active,
-    days_this_month: tallyByChild.get(c.id) || 0
+    days_this_month: daysByChild.get(c.id) || 0,
+    cost_this_month: Math.round((costByChild.get(c.id) || 0) * 100) / 100
   }));
 }
 
@@ -160,6 +209,7 @@ module.exports = {
   cutoffMsFor,
   fmtSastTime,
   ATTENDANCE_JOIN,
+  costForRow,
   serializeAttendanceRow,
   attendanceForDate,
   attendanceForRange,
