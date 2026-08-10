@@ -67,7 +67,8 @@
   @media (max-width: 720px) { .settings-grid { grid-template-columns: repeat(2, 1fr); } }
 
   .search-row { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2); flex-wrap: wrap; }
-  .search-row input[type="month"] { font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .search-row input[type="month"], .search-row input[type="text"], .search-row select { font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .search-row input[type="text"]::placeholder { color: var(--ink-faint); }
   .search-row label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
 
   .table-scroll { overflow-x: auto; }
@@ -158,6 +159,8 @@
     </div>
     <div class="search-row">
       <input type="month" id="monthPicker" />
+      <input type="text" id="tallySearch" placeholder="Search child or group…" style="flex:1; min-width:160px;" />
+      <select id="tallyGroupFilter" style="min-width:140px;"><option value="">All groups</option></select>
       <label><input type="checkbox" id="showArchived" style="width:auto;" /> Show archived</label>
     </div>
     <div class="table-scroll">
@@ -277,11 +280,28 @@
     const all = el('showArchived').checked ? '1' : '0';
     const result = await api(`/children-tally?month=${encodeURIComponent(month)}&all=${all}`);
     state.tally = result.children;
+    syncGroupFilterOptions();
     renderTally();
   }
 
+  // Keeps the group dropdown's options in sync with whatever groups actually
+  // appear in the current roster/month, without clobbering the user's
+  // current selection if it's still valid.
+  function syncGroupFilterOptions() {
+    const select = el('tallyGroupFilter');
+    const current = select.value;
+    const groups = Array.from(new Set(state.tally.map(c => c.group_name).filter(Boolean))).sort();
+    select.innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+    if (groups.includes(current)) select.value = current;
+  }
+
   function renderTally() {
-    const rows = state.tally;
+    const q = (el('tallySearch').value || '').toLowerCase().trim();
+    const groupFilter = el('tallyGroupFilter').value;
+    const rows = state.tally.filter(c =>
+      (!groupFilter || c.group_name === groupFilter) &&
+      (!q || c.full_name.toLowerCase().includes(q) || (c.group_name || '').toLowerCase().includes(q))
+    );
     el('tallyCount').textContent = rows.length + (rows.length === 1 ? ' child' : ' children');
     el('tallyEmpty').hidden = rows.length !== 0;
     el('tallyBody').innerHTML = rows.map(c => `
@@ -296,6 +316,31 @@
 
   el('monthPicker').addEventListener('change', () => loadTally().catch(err => showToast(err.message, true)));
   el('showArchived').addEventListener('change', () => loadTally().catch(err => showToast(err.message, true)));
+  el('tallySearch').addEventListener('input', renderTally);
+  el('tallyGroupFilter').addEventListener('change', renderTally);
+
+  // ---------- live refresh ----------
+  // A teacher can tap Roll Call / Collect on another device while this page
+  // sits open on the office screen -- poll the current month's tally so the
+  // counts stay current without needing a manual reload. Paused while the
+  // tab is in the background so it doesn't hammer the API for no reason.
+  const TALLY_REFRESH_MS = 20000;
+  let tallyRefreshTimer = null;
+
+  function startTallyRefresh() {
+    stopTallyRefresh();
+    tallyRefreshTimer = setInterval(() => {
+      loadTally().catch(err => showToast(err.message, true));
+    }, TALLY_REFRESH_MS);
+  }
+  function stopTallyRefresh() {
+    if (tallyRefreshTimer) clearInterval(tallyRefreshTimer);
+    tallyRefreshTimer = null;
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopTallyRefresh();
+    else { loadTally().catch(err => showToast(err.message, true)); startTallyRefresh(); }
+  });
 
   // ---------- per-child history modal ----------
   el('tallyBody').addEventListener('click', async (e) => {
@@ -344,6 +389,7 @@
     } catch (err) {
       showToast(err.message, true);
     }
+    startTallyRefresh();
   })();
 })();
 </script>
