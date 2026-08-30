@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('./db');
-const { todaySAST, nowMs, sastArrivalMs, GROUPS } = db;
+const { todaySAST, nowMs, sastArrivalMs, GROUPS, newParentToken } = db;
 const reports = require('./reports');
 const { getSettings, attendanceForDate, attendanceForRange, dayCollectionStatus, buildCsv } = reports;
 const mailer = require('./mailer');
@@ -27,7 +27,11 @@ function serializeChild(row) {
     parent_name: row.parent_name,
     parent_phone: row.parent_phone,
     pickup_notes: row.pickup_notes,
-    active: !!row.active
+    active: !!row.active,
+    // Not a secret from staff -- they already see every child's full record --
+    // just the link that opens this one child's no-login Parent View, so the
+    // roster screen can offer a "copy parent link" action per child.
+    parent_token: row.parent_token
   };
 }
 
@@ -56,9 +60,9 @@ router.post('/children', (req, res) => {
 
   const now = nowMs();
   const result = db.prepare(`
-    INSERT INTO children (full_name, group_name, parent_name, parent_phone, pickup_notes, active, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 1, ?, ?)
-  `).run(full_name.trim(), group.value, parent_name || null, parent_phone || null, pickup_notes || null, now, now);
+    INSERT INTO children (full_name, group_name, parent_name, parent_phone, pickup_notes, active, created_at, updated_at, parent_token)
+    VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+  `).run(full_name.trim(), group.value, parent_name || null, parent_phone || null, pickup_notes || null, now, now, newParentToken());
 
   const row = db.prepare('SELECT * FROM children WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(serializeChild(row));
@@ -102,6 +106,16 @@ router.post('/children/:id/restore', (req, res) => {
   const result = db.prepare('UPDATE children SET active = 1, updated_at = ? WHERE id = ?').run(nowMs(), req.params.id);
   if (!result.changes) return res.status(404).json({ error: 'Child not found' });
   res.status(204).end();
+});
+
+// If a parent link was ever sent to the wrong person, this swaps the child's
+// token for a fresh one -- the old link stops working immediately since
+// lookups are by exact token match.
+router.post('/children/:id/regenerate-parent-token', (req, res) => {
+  const token = newParentToken();
+  const result = db.prepare('UPDATE children SET parent_token = ?, updated_at = ? WHERE id = ?').run(token, nowMs(), req.params.id);
+  if (!result.changes) return res.status(404).json({ error: 'Child not found' });
+  res.json({ parent_token: token });
 });
 
 // ---------- attendance ----------

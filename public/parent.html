@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Howick Pre-Primary — Parent View</title>
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+  body { padding: 0 0 40px; min-height: 100vh; }
+  a { color: var(--brand-blue); text-decoration: none; }
+  a:hover { color: var(--brand-green-deep); }
+
+  .masthead-outer { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .masthead { max-width: 480px; margin: 0 auto; padding: 18px 20px 16px; display: flex; align-items: center; gap: 12px; }
+  .badge-mark { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+  .wordmark { font-family: var(--font-display); font-weight: 700; font-size: 21px; line-height: 1.05; letter-spacing: -0.01em; }
+  .wordmark .w-howick { color: var(--brand-green-deep); }
+  .wordmark .w-sub { display: block; font-family: var(--font-display); font-weight: 500; font-size: 12px; color: var(--brand-blue); letter-spacing: 0.01em; margin-top: 1px; }
+  .scallop {
+    height: 12px; background-color: var(--paper);
+    background-image: radial-gradient(circle at 10px 0, var(--surface) 10px, transparent 11px);
+    background-size: 20px 12px; background-repeat: repeat-x; background-position: center top;
+  }
+
+  .wrap { max-width: 480px; margin: 0 auto; padding: 18px 20px 0; display: flex; flex-direction: column; gap: 16px; }
+
+  .child-bar { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #fff; background: linear-gradient(155deg, var(--brand-green) 0%, var(--brand-green-deep) 100%); }
+  .child-name { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--ink); }
+  .group-chip { display: inline-flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 11px; font-weight: 700; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; padding: 3px 10px; border-radius: 999px; }
+  .group-chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.8; }
+
+  .status-hero {
+    background: linear-gradient(160deg, var(--brand-sky-tint) 0%, var(--surface) 65%);
+    border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow);
+    padding: 30px 24px 26px; text-align: center;
+  }
+  .status-hero-icon {
+    width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 16px; background: var(--surface);
+    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
+  }
+  .status-hero-icon svg { width: 30px; height: 30px; }
+  .status-hero h1 { font-family: var(--font-display); font-weight: 700; font-size: 21px; margin: 0; color: var(--ink); letter-spacing: -0.01em; }
+  .status-hero p { font-size: 14px; color: var(--ink-soft); margin: 8px 0 0; line-height: 1.5; }
+  .status-hero p strong { color: var(--ink); font-weight: 700; }
+  .status-pill-lg {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 11.5px; font-weight: 700;
+    font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 16px;
+    border-radius: 999px;
+  }
+  .status-pill-lg::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .status-late-note { display: inline-block; margin-top: 10px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--status-late-fg); background: var(--status-late-bg); padding: 3px 10px; border-radius: 999px; }
+
+  .mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mini-stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 13px 15px; box-shadow: var(--shadow); }
+  .mini-stat .label { font-family: var(--font-display); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); }
+  .mini-stat .value { font-family: var(--font-display); font-weight: 700; font-size: 21px; color: var(--ink); margin-top: 5px; }
+  .mini-stat .value.money { color: var(--brand-green-deep); }
+
+  .section-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 4px 0 0; }
+  .section-sub { font-size: 12.5px; color: var(--ink-faint); margin-top: 2px; }
+
+  .journal-list { display: flex; flex-direction: column; gap: 10px; }
+  .journal-entry { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 13px 16px; box-shadow: var(--shadow); }
+  .journal-entry .when { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+  .journal-entry .detail { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.5; }
+  .journal-entry .detail .time { font-family: var(--font-mono); color: var(--ink); }
+  .journal-entry .late-tag { display: inline-block; margin-top: 6px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--status-late-fg); background: var(--status-late-bg); padding: 2px 8px; border-radius: 999px; }
+
+  .more-link { text-align: center; font-size: 13px; font-weight: 600; padding-top: 2px; background: none; border: none; cursor: pointer; width: 100%; font-family: var(--font-body); }
+  .reassure { text-align: center; font-size: 12px; color: var(--ink-faint); line-height: 1.6; padding: 4px 12px 0; }
+  .empty-state { text-align: center; font-size: 12.5px; color: var(--ink-faint); padding: 10px 0; }
+
+  .center-page { max-width: 380px; margin: 18vh auto 0; padding: 0 20px; text-align: center; }
+  .center-page .badge-mark { width: 56px; height: 56px; margin: 0 auto 16px; }
+  .center-page h1 { font-family: var(--font-display); font-weight: 700; font-size: 20px; margin: 0 0 8px; }
+  .center-page p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div id="loadingState" class="center-page">
+  <img class="badge-mark" src="/logo.png" alt="Howick Pre-Primary &amp; Baby Centre logo">
+  <p>Loading&hellip;</p>
+</div>
+
+<div id="errorState" class="center-page" hidden>
+  <img class="badge-mark" src="/logo.png" alt="Howick Pre-Primary &amp; Baby Centre logo">
+  <h1>We couldn't find that link</h1>
+  <p>Please use the exact link Howick Pre-Primary &amp; Baby Centre sent you, or contact the office if it's stopped working.</p>
+</div>
+
+<div id="page" hidden>
+
+  <div class="masthead-outer">
+    <div class="masthead">
+      <img class="badge-mark" src="/logo.png" alt="Howick Pre-Primary &amp; Baby Centre logo">
+      <div>
+        <div class="wordmark"><span class="w-howick">Howick</span><span class="w-sub">Parent View</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="scallop"></div>
+
+  <div class="wrap">
+
+    <div class="child-bar">
+      <div class="avatar" id="childAvatar">?</div>
+      <div>
+        <div class="child-name" id="childName">&nbsp;</div>
+        <span class="group-chip" id="groupChip" hidden></span>
+      </div>
+    </div>
+
+    <div class="status-hero">
+      <div class="status-hero-icon" id="statusIcon"></div>
+      <h1 id="statusHeading">&nbsp;</h1>
+      <p id="statusDetail"></p>
+      <div class="status-pill-lg" id="statusPill"></div>
+      <div class="status-late-note" id="statusLateNote" hidden>Late pickup</div>
+    </div>
+
+    <div class="mini-stats">
+      <div class="mini-stat">
+        <div class="label">Days this month</div>
+        <div class="value" id="statDays">&mdash;</div>
+      </div>
+      <div class="mini-stat">
+        <div class="label">So far this month</div>
+        <div class="value money" id="statCost">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2 id="recentHeading">Recent afternoons</h2>
+      <div class="section-sub" id="recentSub">A quick look back at the last few days.</div>
+    </div>
+
+    <div class="journal-list" id="journalList"></div>
+    <div class="empty-state" id="journalEmpty" hidden>No collections recorded yet.</div>
+
+    <button type="button" class="more-link" id="moreLink" hidden></button>
+
+    <div class="reassure">You can always come back to this page &mdash; no login needed, just this link.</div>
+
+  </div>
+</div>
+
+<script src="/group-colors.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const token = location.pathname.split('/')[2];
+  const el = (id) => document.getElementById(id);
+  const state = { expanded: false, timer: null };
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function initials(name) {
+    return (name || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  }
+  function fmtMoney(amount, currency) {
+    return (currency || 'R') + ' ' + (Number(amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtDayLabel(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+
+  const HOUSE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5"></path><path d="M6 10v9a1 1 0 0 0 1 1h3v-5h4v5h3a1 1 0 0 0 1-1v-9"></path></svg>';
+
+  async function load() {
+    let data;
+    try {
+      const res = await fetch(`/parent/${encodeURIComponent(token)}/data${state.expanded ? '?scope=month' : ''}`, { headers: { 'Content-Type': 'application/json' } });
+      if (res.status === 404) { showError(); return; }
+      if (!res.ok) throw new Error('Request failed');
+      data = await res.json();
+    } catch (err) {
+      // A transient network hiccup shouldn't flip an already-loaded page into
+      // the "bad link" state -- only show that on an actual 404, above.
+      if (el('page').hidden) showError();
+      return;
+    }
+    render(data);
+  }
+
+  function showError() {
+    el('loadingState').hidden = true;
+    el('page').hidden = true;
+    el('errorState').hidden = false;
+    stopRefresh();
+  }
+
+  function render(data) {
+    el('loadingState').hidden = true;
+    el('errorState').hidden = true;
+    el('page').hidden = false;
+
+    el('childAvatar').textContent = initials(data.child.full_name);
+    el('childName').textContent = data.child.full_name;
+    const groupChip = el('groupChip');
+    if (data.child.group_name) {
+      const c = (window.GROUP_COLORS && window.GROUP_COLORS[data.child.group_name]) || window.GROUP_COLOR_FALLBACK;
+      groupChip.hidden = false;
+      groupChip.textContent = data.child.group_name;
+      groupChip.style.background = c.tint;
+      groupChip.style.color = c.text;
+    } else {
+      groupChip.hidden = true;
+    }
+
+    renderStatus(data);
+
+    el('statDays').textContent = data.days_this_month;
+    el('statCost').textContent = fmtMoney(data.cost_this_month, data.currency);
+
+    renderJournal(data);
+  }
+
+  function renderStatus(data) {
+    const name = data.child.full_name.split(' ')[0];
+    const icon = el('statusIcon');
+    const heading = el('statusHeading');
+    const detail = el('statusDetail');
+    const pill = el('statusPill');
+    const lateNote = el('statusLateNote');
+    lateNote.hidden = true;
+
+    if (!data.today) {
+      icon.style.background = 'var(--surface)';
+      icon.style.color = 'var(--status-out-fg)';
+      icon.innerHTML = HOUSE_ICON;
+      heading.textContent = `${name} hasn't checked in yet today`;
+      detail.innerHTML = 'Aftercare starts at <strong>13:00</strong> &mdash; this page updates the moment that happens.';
+      pill.textContent = 'Not checked in yet';
+      pill.style.background = 'var(--status-out-bg)';
+      pill.style.color = 'var(--status-out-fg)';
+    } else if (data.today.status === 'collected') {
+      icon.style.background = 'var(--surface)';
+      icon.style.color = 'var(--status-in-fg)';
+      icon.innerHTML = HOUSE_ICON;
+      heading.textContent = `${name} was collected today`;
+      detail.innerHTML = `Collected at <strong>${escapeHtml(data.today.collected_time)}</strong> by ${escapeHtml(data.today.collected_by || 'a family member')}.`;
+      pill.textContent = 'Collected';
+      pill.style.background = 'var(--status-in-bg)';
+      pill.style.color = 'var(--status-in-fg)';
+      lateNote.hidden = !data.today.late_collection;
+    } else {
+      icon.style.background = 'var(--surface)';
+      icon.style.color = 'var(--brand-green-deep)';
+      icon.innerHTML = HOUSE_ICON;
+      heading.textContent = `${name} is safe at aftercare`;
+      detail.innerHTML = `Checked in at <strong>${escapeHtml(data.today.checked_in_time)}</strong> and waiting to be collected &mdash; this page updates the moment that happens.`;
+      pill.textContent = 'Awaiting pickup';
+      pill.style.background = 'var(--status-pending-bg)';
+      pill.style.color = 'var(--status-pending-fg)';
+    }
+  }
+
+  function renderJournal(data) {
+    const rows = data.recent || [];
+    el('recentHeading').textContent = state.expanded ? 'This month\'s afternoons' : 'Recent afternoons';
+    el('recentSub').textContent = state.expanded
+      ? 'Every collected day so far this month.'
+      : 'A quick look back at the last few days.';
+
+    el('journalEmpty').hidden = rows.length !== 0;
+    el('journalList').innerHTML = rows.map(r => `
+      <div class="journal-entry">
+        <div class="when">${escapeHtml(fmtDayLabel(r.date))}</div>
+        <div class="detail">Arrived <span class="time">${escapeHtml(r.checked_in_time)}</span>, collected <span class="time">${escapeHtml(r.collected_time)}</span> by ${escapeHtml(r.collected_by || 'a family member')}.</div>
+        ${r.late_collection ? '<span class="late-tag">Late pickup</span>' : ''}
+      </div>
+    `).join('');
+
+    const more = el('moreLink');
+    if (!state.expanded && rows.length >= 6) {
+      more.hidden = false;
+      more.textContent = 'View the full month →';
+    } else if (state.expanded) {
+      more.hidden = false;
+      more.textContent = 'Show fewer ←';
+    } else {
+      more.hidden = true;
+    }
+  }
+
+  el('moreLink').addEventListener('click', () => {
+    state.expanded = !state.expanded;
+    load();
+  });
+
+  // ---------- live refresh ----------
+  // A parent might leave this open while waiting for pickup -- poll gently
+  // so it reflects a check-in or collection without needing a manual reload.
+  const REFRESH_MS = 30000;
+  function startRefresh() {
+    stopRefresh();
+    state.timer = setInterval(load, REFRESH_MS);
+  }
+  function stopRefresh() {
+    if (state.timer) clearInterval(state.timer);
+    state.timer = null;
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopRefresh();
+    else { load(); startRefresh(); }
+  });
+
+  load();
+  startRefresh();
+})();
+</script>
+</body>
+</html>
