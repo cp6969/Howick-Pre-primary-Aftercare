@@ -297,6 +297,8 @@
         <td>${escapeHtml(c.parent_phone || '—')}</td>
         <td>${escapeHtml(c.pickup_notes || '—')}</td>
         <td style="white-space:nowrap;">
+          <button class="row-action" data-copy-link="${c.id}">Copy parent link</button>
+          <button class="row-action" data-new-link="${c.id}">New link</button>
           <button class="row-action" data-edit="${c.id}">Edit</button>
           ${c.active
             ? `<button class="row-action danger" data-archive="${c.id}">Archive</button>`
@@ -323,7 +325,27 @@
     const editId = e.target.dataset && e.target.dataset.edit;
     const archiveId = e.target.dataset && e.target.dataset.archive;
     const restoreId = e.target.dataset && e.target.dataset.restore;
+    const copyLinkId = e.target.dataset && e.target.dataset.copyLink;
+    const newLinkId = e.target.dataset && e.target.dataset.newLink;
 
+    if (copyLinkId) {
+      const c = state.children.find(x => String(x.id) === copyLinkId);
+      if (!c) return;
+      const url = `${location.origin}/parent/${c.parent_token}`;
+      try { await navigator.clipboard.writeText(url); showToast('Parent link copied.'); }
+      catch (err) { showToast('Could not copy automatically — link: ' + url, true); }
+      return;
+    }
+    if (newLinkId) {
+      if (!confirm('Generate a new parent link for this child? The old link will stop working immediately.')) return;
+      try {
+        const result = await api('/children/' + newLinkId + '/regenerate-parent-token', { method: 'POST' });
+        const c = state.children.find(x => String(x.id) === newLinkId);
+        if (c) c.parent_token = result.parent_token;
+        showToast('New parent link created — use "Copy parent link" to get it.');
+      } catch (err) { showToast(err.message, true); }
+      return;
+    }
     if (editId) {
       const c = state.children.find(x => String(x.id) === editId);
       if (!c) return;

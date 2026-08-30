@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 const dataDir = path.join(__dirname, 'data');
@@ -49,6 +50,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_attendance_child ON attendance(child_id);
   CREATE INDEX IF NOT EXISTS idx_children_active ON children(active);
 `);
+
+// Migration: parent_token was added after the children table already existed
+// in production, so it can't just be part of the CREATE TABLE above -- SQLite
+// needs an explicit ALTER TABLE for a column added to a live table. This is
+// the long random link a parent uses to open their own child's Parent View,
+// with no login. Run before the demo seed below (so freshly-seeded rows get
+// the column too); the actual token values are backfilled further down,
+// after that seed has had a chance to insert its own tokenless rows.
+const hasParentToken = db.prepare("PRAGMA table_info(children)").all().some((c) => c.name === 'parent_token');
+if (!hasParentToken) {
+  db.exec('ALTER TABLE children ADD COLUMN parent_token TEXT');
+}
+function newParentToken() {
+  return crypto.randomBytes(24).toString('base64url');
+}
 
 const defaultSettings = {
   cutoff_time: '17:30',
@@ -127,6 +143,17 @@ if (childrenCount === 0) {
   seedDemo(DEMO_CHILDREN);
 }
 
+// Every child needs a parent_token, including rows that predate the column
+// (backfilled above) and rows the demo seed just inserted (which doesn't set
+// one itself) -- one pass here catches both. The unique index goes on last,
+// once every row actually has a value to be unique over.
+const childrenMissingToken = db.prepare('SELECT id FROM children WHERE parent_token IS NULL').all();
+if (childrenMissingToken.length) {
+  const setToken = db.prepare('UPDATE children SET parent_token = ? WHERE id = ?');
+  for (const row of childrenMissingToken) setToken.run(newParentToken(), row.id);
+}
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_children_parent_token ON children(parent_token)');
+
 // --- SAST (Africa/Johannesburg, UTC+2 year-round, no DST) date helpers ---
 // Deliberately not relying on the server's local timezone (a Docker
 // container's default is UTC), so "today" and "13:00" always mean the same
@@ -158,3 +185,4 @@ module.exports.nowMs = nowMs;
 module.exports.sastDateTimeMs = sastDateTimeMs;
 module.exports.sastArrivalMs = sastArrivalMs;
 module.exports.GROUPS = GROUPS;
+module.exports.newParentToken = newParentToken;

@@ -8,6 +8,7 @@ const SQLiteSessionStore = require('./session-store');
 const apiRouter = require('./api');
 const adminRouter = require('./admin');
 const scheduler = require('./scheduler');
+const reports = require('./reports');
 
 const REQUIRED_ENV = ['SESSION_SECRET', 'APP_USERNAME', 'APP_PASSWORD_HASH', 'ADMIN_PIN_HASH'];
 const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
@@ -81,6 +82,22 @@ for (const file of PUBLIC_ASSETS) {
     res.sendFile(path.join(__dirname, 'public', file));
   });
 }
+
+// Parent View -- a no-login page a parent opens via a long random link
+// unique to their own child (the token itself is the auth, so this is
+// deliberately outside every other gate in this file, not just placed before
+// them). /parent/:token always serves the page; the page's own JS fetches
+// /parent/:token/data and shows a friendly "link not found" state for a bad
+// or since-regenerated token rather than a raw 404 page.
+app.get('/parent/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'parent.html'));
+});
+app.get('/parent/:token/data', (req, res) => {
+  const summary = reports.parentSummaryForChild(req.params.token, { scope: req.query.scope === 'month' ? 'month' : undefined });
+  if (!summary) return res.status(404).json({ error: 'Not found' });
+  res.set('Cache-Control', 'no-store');
+  res.json(summary);
+});
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body || {};

@@ -178,6 +178,42 @@ function monthlyTallyForAllChildren(yearMonth, { includeArchived } = {}) {
   }));
 }
 
+// Everything the Parent View needs for one child, looked up by their
+// no-login magic-link token rather than an id -- the token IS the auth here,
+// so a miss just means "no such link" (a 404 upstream), never a lookup by a
+// guessable id. Today's status, this month's running tally, and a handful
+// of recent completed days: enough for a parent to check on their own child
+// without exposing anything about anyone else's.
+function parentSummaryForChild(token, { scope } = {}) {
+  const child = db.prepare('SELECT * FROM children WHERE parent_token = ?').get(token);
+  if (!child) return null;
+
+  const settings = getSettings();
+  const date = todaySAST();
+  const todayRow = db.prepare(`${ATTENDANCE_JOIN} WHERE a.child_id = ? AND a.date = ?`).get(child.id, date);
+
+  const { from, to } = monthDateRange(date.slice(0, 7));
+  const monthRows = db.prepare('SELECT child_id, date, checked_in_at, collected_at FROM attendance WHERE child_id = ? AND date BETWEEN ? AND ?').all(child.id, from, to);
+  const costThisMonth = monthRows.reduce((sum, r) => sum + costForRow(r, settings).total, 0);
+
+  // Default view: a handful of recent completed days regardless of month
+  // boundary (so the start of a new month doesn't suddenly show nothing).
+  // "scope=month" (the Parent View's "view the full month" toggle) instead
+  // shows every completed day within the current calendar month.
+  const recentRows = scope === 'month'
+    ? db.prepare(`${ATTENDANCE_JOIN} WHERE a.child_id = ? AND a.date BETWEEN ? AND ? AND a.collected_at IS NOT NULL ORDER BY a.date DESC`).all(child.id, from, to)
+    : db.prepare(`${ATTENDANCE_JOIN} WHERE a.child_id = ? AND a.collected_at IS NOT NULL ORDER BY a.date DESC LIMIT 6`).all(child.id);
+
+  return {
+    child: { full_name: child.full_name, group_name: child.group_name },
+    currency: settings.currency || 'R',
+    today: todayRow ? serializeAttendanceRow(todayRow, settings) : null,
+    days_this_month: monthRows.length,
+    cost_this_month: Math.round(costThisMonth * 100) / 100,
+    recent: recentRows.map(r => serializeAttendanceRow(r, settings))
+  };
+}
+
 const CSV_HEADER = ['Date', 'Child Name', 'Group', 'Parent / Guardian', 'Arrival Time', 'Collection Time', 'Collected By', 'Late Pickup?'];
 
 function csvEscape(v) {
@@ -216,6 +252,7 @@ module.exports = {
   attendanceHistoryForChild,
   monthDateRange,
   monthlyTallyForAllChildren,
+  parentSummaryForChild,
   dayCollectionStatus,
   buildCsv
 };
