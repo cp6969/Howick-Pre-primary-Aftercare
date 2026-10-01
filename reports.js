@@ -29,7 +29,7 @@ function fmtSastTime(ms) {
 }
 
 const ATTENDANCE_JOIN = `
-  SELECT a.*, c.full_name, c.group_name, c.parent_name
+  SELECT a.*, c.full_name, c.group_name, c.parent_name, c.family_id
   FROM attendance a
   JOIN children c ON c.id = a.child_id
 `;
@@ -89,6 +89,10 @@ function serializeAttendanceRow(row, settings) {
     collected_at: row.collected_at,
     collected_time: fmtSastTime(row.collected_at),
     collected_by: row.collected_by,
+    off_list: !!row.off_list,
+    nudged_at: row.nudged_at || null,
+    nudged_time: fmtSastTime(row.nudged_at),
+    family_id: row.family_id || null,
     notes: row.notes,
     status,
     late_collection: collected && row.collected_at > cutoff,
@@ -156,8 +160,8 @@ function monthlyTallyForAllChildren(yearMonth, { includeArchived } = {}) {
   const settings = getSettings();
   const children = db.prepare(
     includeArchived
-      ? 'SELECT id, full_name, group_name, active FROM children ORDER BY full_name'
-      : 'SELECT id, full_name, group_name, active FROM children WHERE active = 1 ORDER BY full_name'
+      ? 'SELECT id, full_name, group_name, active, family_id FROM children ORDER BY full_name'
+      : 'SELECT id, full_name, group_name, active, family_id FROM children WHERE active = 1 ORDER BY full_name'
   ).all();
   const attendanceRows = db.prepare('SELECT child_id, date, checked_in_at, collected_at FROM attendance WHERE date BETWEEN ? AND ?').all(from, to);
 
@@ -173,6 +177,7 @@ function monthlyTallyForAllChildren(yearMonth, { includeArchived } = {}) {
     full_name: c.full_name,
     group_name: c.group_name,
     active: !!c.active,
+    family_key: familyKeyFor(c),
     days_this_month: daysByChild.get(c.id) || 0,
     cost_this_month: Math.round((costByChild.get(c.id) || 0) * 100) / 100
   }));
@@ -214,7 +219,91 @@ function parentSummaryForChild(token, { scope } = {}) {
   };
 }
 
-const CSV_HEADER = ['Date', 'Child Name', 'Group', 'Parent / Guardian', 'Arrival Time', 'Collection Time', 'Collected By', 'Late Pickup?'];
+// "Pickup Check" is last so the first eight columns still paste straight
+// into the billing workbook's Daily Log tab as before.
+// ---------- monthly family statements ----------
+// One statement per family: linked siblings (children.family_id) share one,
+// any other child gets their own. Only families with at least one day of
+// aftercare in the month are included. Uses the same costForRow as the
+// Admin tally and Parent View, so the three can never disagree.
+
+function familyKeyFor(child) {
+  return child.family_id ? 'f' + child.family_id : 'c' + child.id;
+}
+
+function monthLabel(yearMonth) {
+  const [y, m] = yearMonth.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+function round2(n) { return Math.round(n * 100) / 100; }
+
+function familyStatements(yearMonth, { familyKey } = {}) {
+  const { from, to } = monthDateRange(yearMonth);
+  const settings = getSettings();
+  const children = db.prepare('SELECT id, full_name, group_name, parent_name, parent_phone, family_id FROM children').all();
+  const childById = new Map(children.map(c => [c.id, c]));
+  const rows = db.prepare('SELECT * FROM attendance WHERE date BETWEEN ? AND ? ORDER BY date ASC').all(from, to);
+
+  const families = new Map();
+  for (const row of rows) {
+    const child = childById.get(row.child_id);
+    if (!child) continue;
+    const key = familyKeyFor(child);
+    if (familyKey && key !== familyKey) continue;
+    if (!families.has(key)) families.set(key, { key, children: new Map() });
+    const fam = families.get(key);
+    if (!fam.children.has(child.id)) {
+      fam.children.set(child.id, { id: child.id, full_name: child.full_name, group_name: child.group_name, parent_name: child.parent_name, parent_phone: child.parent_phone, days: [], subtotal: 0 });
+    }
+    const cost = costForRow(row, settings);
+    const entry = fam.children.get(child.id);
+    entry.days.push({
+      date: row.date,
+      arrival: fmtSastTime(row.checked_in_at),
+      collection: fmtSastTime(row.collected_at),
+      open: row.collected_at == null,
+      collected_by: row.collected_by,
+      billed_hours: round2(cost.billed_hours),
+      base_charge: round2(cost.base_charge),
+      late_blocks: cost.late_blocks,
+      late_fee: round2(cost.late_fee),
+      total: round2(cost.total)
+    });
+    entry.subtotal += cost.total;
+  }
+
+  const out = [...families.values()].map(fam => {
+    const kids = [...fam.children.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
+    kids.forEach(k => { k.subtotal = round2(k.subtotal); });
+    const parentNames = [...new Set(kids.map(k => k.parent_name).filter(Boolean))];
+    return {
+      key: fam.key,
+      parent_names: parentNames,
+      parent_phone: (kids.find(k => k.parent_phone) || {}).parent_phone || null,
+      children: kids,
+      days: kids.reduce((n, k) => n + k.days.length, 0),
+      late_fees: round2(kids.reduce((n, k) => n + k.days.reduce((m, d) => m + d.late_fee, 0), 0)),
+      total: round2(kids.reduce((n, k) => n + k.subtotal, 0))
+    };
+  }).sort((a, b) => (a.parent_names[0] || a.children[0].full_name).localeCompare(b.parent_names[0] || b.children[0].full_name));
+
+  return {
+    month: yearMonth,
+    month_label: monthLabel(yearMonth),
+    generated_on: todaySAST(),
+    rates: {
+      currency: settings.currency || 'R',
+      hourly_rate: Number(settings.hourly_rate) || 0,
+      daily_minimum_hours: Number(settings.daily_minimum_hours) || 0,
+      late_fee_per_block: Number(settings.late_fee_per_block) || 0,
+      cutoff_time: settings.cutoff_time || '17:30'
+    },
+    families: out
+  };
+}
+
+const CSV_HEADER = ['Date', 'Child Name', 'Group', 'Parent / Guardian', 'Arrival Time', 'Collection Time', 'Collected By', 'Late Pickup?', 'Pickup Check'];
 
 function csvEscape(v) {
   if (v == null) return '';
@@ -233,7 +322,8 @@ function buildCsv(rows) {
       r.checked_in_time || '',
       r.collected_time || '',
       r.collected_by || '',
-      r.late_collection ? 'Late' : ''
+      r.late_collection ? 'Late' : '',
+      r.off_list ? 'Not on pickup list' : ''
     ].map(csvEscape).join(','));
   }
   return lines.join('\n');
@@ -252,6 +342,8 @@ module.exports = {
   attendanceHistoryForChild,
   monthDateRange,
   monthlyTallyForAllChildren,
+  familyKeyFor,
+  familyStatements,
   parentSummaryForChild,
   dayCollectionStatus,
   buildCsv

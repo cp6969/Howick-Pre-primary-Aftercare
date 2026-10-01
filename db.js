@@ -66,6 +66,22 @@ function newParentToken() {
   return crypto.randomBytes(24).toString('base64url');
 }
 
+// Later columns, added to live tables the same way as parent_token above.
+//  - children.family_id: siblings share one value (the lowest child id in
+//    the family); NULL means no linked siblings.
+//  - attendance.off_list: 1 when staff released a child to someone who isn't
+//    on that child's pickup list, after the warning. Kept as an audit trail.
+//  - attendance.nudged_at: when staff last opened the "late pickup" WhatsApp
+//    message for this row, so a second teacher can see it's been done.
+function addColumnIfMissing(table, column, definition) {
+  const exists = db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column);
+  if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+addColumnIfMissing('children', 'family_id', 'INTEGER');
+addColumnIfMissing('attendance', 'off_list', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('attendance', 'nudged_at', 'INTEGER');
+db.exec('CREATE INDEX IF NOT EXISTS idx_children_family ON children(family_id)');
+
 const defaultSettings = {
   cutoff_time: '17:30',
   hourly_rate: '45',

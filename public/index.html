@@ -107,6 +107,9 @@
   .a-4 { background: linear-gradient(155deg, #FFCE6B 0%, var(--brand-amber) 100%); color: var(--brand-orange-ink); }
   .child-name { font-weight: 600; color: var(--ink); line-height: 1.2; white-space: nowrap; }
   .child-group { font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
+  .child-cell > div:last-child { min-width: 0; }
+  #rosterBody .child-group { max-width: 210px; overflow: hidden; text-overflow: ellipsis; }
+  .offlist-note { display: block; font-size: 11px; font-weight: 700; color: var(--status-late-fg); white-space: nowrap; }
   .group-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
   .time-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); }
   .time-mono.empty { color: var(--ink-faint); }
@@ -142,6 +145,21 @@
   .who-btn:hover { background: var(--brand-sky-tint); border-color: var(--brand-blue); }
   .who-btn:active { transform: translateY(1px); }
   .who-btn.who-selected { background: var(--brand-orange); border-color: var(--brand-orange); color: #fff; }
+  .who-btn:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+
+  .pickup-file { font-size: 12.5px; color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
+  .pickup-file strong { color: var(--ink); }
+  .sibling-box { margin-bottom: 14px; }
+  .sibling-box .section-hint { margin: 0 0 6px; }
+  .sibling-opt { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 6px; cursor: pointer; font-size: 13.5px; }
+  .sibling-opt input { width: 18px; height: 18px; accent-color: var(--brand-orange); margin: 0; }
+  .sibling-opt .avatar { width: 26px; height: 26px; font-size: 10.5px; }
+  .offlist { border: 1.5px solid var(--status-late-fg); background: var(--status-late-bg); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .offlist-title { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--status-late-fg); }
+  .offlist-detail { font-size: 13px; color: var(--ink); line-height: 1.5; }
+  .offlist-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .btn-danger { background: var(--brand-coral); color: #fff; }
+  .btn-danger:hover { filter: brightness(1.06); }
 
   .checklist { max-height: 320px; overflow-y: auto; }
   .checklist-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
@@ -150,12 +168,21 @@
   .checklist-item .child-name { font-size: 13px; }
 
   .pending-list { display: flex; flex-direction: column; }
-  .pending-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  /* Name block takes the leftover width and truncates; the action column
+     never shrinks, so a long name can't slide under the Collect button. */
+  .pending-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 20px; border-bottom: 1px solid var(--line); }
   .pending-item:last-child { border-bottom: none; }
-  .pending-item .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .pending-item .child-name { font-size: 13px; }
-  .pending-item .since { font-size: 11.5px; color: var(--ink-faint); font-family: var(--font-mono); }
-  .elapsed { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .pending-item .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .pending-item .who-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .pending-item .child-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+  .pending-item .meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-faint); }
+  .pending-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .pending-actions .btn { padding: 6px 14px; }
+  .wa-link { font-family: var(--font-display); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--brand-green-deep); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+  .wa-link svg { width: 13px; height: 13px; }
+  .wa-link:hover { text-decoration: underline; }
+  .wa-link:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; border-radius: 4px; }
+  .elapsed { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
   .elapsed.ok { color: var(--status-in-fg); background: var(--status-in-bg); }
   .elapsed.warn { color: var(--status-pending-fg); background: var(--status-pending-bg); }
   .elapsed.late { color: var(--status-late-fg); background: var(--status-late-bg); }
@@ -197,14 +224,20 @@
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 999px;
     font-size: 12.5px; box-shadow: var(--shadow); z-index: 100; opacity: 0; pointer-events: none;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.2s ease; display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px);
   }
   .toast.show { opacity: 1; }
+  .toast.show.has-action { pointer-events: auto; }
   .toast.error { background: var(--brand-coral); color: #fff; }
+  .toast-action { appearance: none; border: none; background: none; cursor: pointer; padding: 2px 0; font-family: var(--font-display); font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--brand-amber); }
+  .toast-action:focus-visible { outline: 2px solid var(--brand-amber); outline-offset: 2px; border-radius: 4px; }
 
   @media (max-width: 880px) {
     .grid { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, 1fr); }
+    /* Awaiting pickup is what staff use most at pickup time, so on a phone
+       it comes before the full roster instead of below it. */
+    .side-stack { order: -1; }
   }
 </style>
 </head>
@@ -262,8 +295,7 @@
           <thead>
             <tr>
               <th>Child</th>
-              <th>Arrival</th>
-              <th>Collection</th>
+              <th>Collected</th>
               <th>Collected by</th>
               <th>Status</th>
               <th></th>
@@ -308,26 +340,41 @@
     <div class="modal-head"><h2 id="collectModalTitle">Record collection</h2><button class="modal-close" data-close="collectModal">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="collectAttendanceId" />
-      <p class="section-hint" style="margin-top:-6px;">Collected by:</p>
-      <div class="who-grid">
-        <button type="button" class="who-btn" data-who="Mother">Mother</button>
-        <button type="button" class="who-btn" data-who="Father">Father</button>
-        <button type="button" class="who-btn" data-who="__other__">Other</button>
+      <div class="pickup-file" id="pickupFile"></div>
+      <div class="sibling-box" id="siblingBox" hidden>
+        <p class="section-hint">Also going home now:</p>
+        <div id="siblingList"></div>
       </div>
-      <form id="collectOtherForm" hidden>
-        <div class="field" style="margin-top:14px;">
-          <label for="collectedByInput">Who collected them?</label>
-          <input type="text" id="collectedByInput" list="pickupSuggestions" placeholder="e.g. Grandmother, Aftercare van" autofocus />
-          <datalist id="pickupSuggestions"></datalist>
+      <div id="collectChoose">
+        <p class="section-hint" style="margin-top:0;">Collected by:</p>
+        <div class="who-grid">
+          <button type="button" class="who-btn" data-who="Mother">Mother</button>
+          <button type="button" class="who-btn" data-who="Father">Father</button>
+          <button type="button" class="who-btn" data-who="__other__">Other</button>
         </div>
-        <div class="submit-row"><button type="submit" class="btn btn-primary">Confirm collected</button></div>
-      </form>
-      <div class="field-error" id="collectError" hidden></div>
+        <form id="collectOtherForm" hidden>
+          <div class="field" style="margin-top:14px;">
+            <label for="collectedByInput">Who collected them?</label>
+            <input type="text" id="collectedByInput" list="pickupSuggestions" placeholder="e.g. Grandmother, Aftercare van" />
+            <datalist id="pickupSuggestions"></datalist>
+          </div>
+          <div class="submit-row"><button type="submit" class="btn btn-primary">Confirm collected</button></div>
+        </form>
+      </div>
+      <div class="offlist" id="offListBox" role="alert" hidden>
+        <div class="offlist-title" id="offListTitle"></div>
+        <div class="offlist-detail" id="offListDetail"></div>
+        <div class="offlist-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="offListBack">Go back</button>
+          <button type="button" class="btn btn-danger btn-sm" id="offListRelease">Release anyway</button>
+        </div>
+      </div>
+      <div class="field-error" id="collectError" hidden style="margin-top:10px;"></div>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" class="toast-action" id="toastAction" hidden></button></div>
 
 <script src="/group-colors.js"></script>
 <script>
@@ -363,25 +410,48 @@
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+  function firstName(name) { return String(name || '').trim().split(/\s+/)[0]; }
+  function joinNames(names) {
+    return names.length <= 1 ? (names[0] || '') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  }
+  function childFor(childId) { return state.children.find(c => c.id === childId); }
 
+  // Errors carry the HTTP status and parsed body, so a 409 from the pickup
+  // check can be told apart from a real failure.
   async function api(path, opts) {
     const res = await fetch('/api' + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
     if (res.status === 401) { location.href = '/login.html'; throw new Error('Not authenticated'); }
     if (!res.ok) {
-      let msg = 'Request failed';
-      try { msg = (await res.json()).error || msg; } catch (e) {}
-      throw new Error(msg);
+      let body = {};
+      try { body = await res.json(); } catch (e) {}
+      const err = new Error(body.error || 'Request failed');
+      err.status = res.status;
+      err.body = body;
+      throw err;
     }
     if (res.status === 204) return null;
     return res.json();
   }
 
-  function showToast(message, isError) {
+  // showToast(msg), showToast(msg, true) for an error, or
+  // showToast(msg, { action: { label: 'Undo', onClick } }) for a toast with a
+  // button, which stays up longer so there's time to tap it.
+  function showToast(message, opts) {
+    const o = typeof opts === 'object' && opts ? opts : { error: !!opts };
     const t = el('toast');
-    t.textContent = message;
-    t.className = 'toast show' + (isError ? ' error' : '');
+    const btn = el('toastAction');
+    el('toastMsg').textContent = message;
+    if (o.action) {
+      btn.textContent = o.action.label;
+      btn.hidden = false;
+      btn.onclick = () => { t.className = 'toast'; clearTimeout(showToast._t); o.action.onClick(); };
+    } else {
+      btn.hidden = true;
+      btn.onclick = null;
+    }
+    t.className = 'toast show' + (o.error ? ' error' : '') + (o.action ? ' has-action' : '');
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => { t.className = 'toast'; }, 2600);
+    showToast._t = setTimeout(() => { t.className = 'toast'; }, o.action ? 6000 : 2600);
   }
 
   function openModal(id) { el(id).hidden = false; }
@@ -477,7 +547,7 @@
     const rows = state.today.filter(r =>
       !q || r.full_name.toLowerCase().includes(q) || (r.parent_name || '').toLowerCase().includes(q) || (r.group_name || '').toLowerCase().includes(q)
     );
-    el('rosterCount').textContent = state.today.length + (state.today.length === 1 ? ' child' : ' children') + ' · today';
+    el('rosterCount').textContent = state.today.length + (state.today.length === 1 ? ' child' : ' children') + ' · all arrived 13:00';
     el('rosterEmpty').hidden = state.today.length !== 0;
 
     el('rosterBody').innerHTML = rows.map(r => `
@@ -491,9 +561,8 @@
             </div>
           </div>
         </td>
-        <td class="time-mono">${r.checked_in_time || '—'}</td>
         <td class="time-mono ${r.collected_time ? '' : 'empty'}">${r.collected_time || '—'}</td>
-        <td class="collected-by ${r.collected_by ? '' : 'empty'}">${escapeHtml(r.collected_by || '—')}</td>
+        <td class="collected-by ${r.collected_by ? '' : 'empty'}">${escapeHtml(r.collected_by || '—')}${r.off_list ? `<span class="offlist-note" title="Released to someone not on ${escapeHtml(firstName(r.full_name))}'s pickup list">Not on list</span>` : ''}</td>
         <td>${statusPill(r)}</td>
         <td>
           ${r.status === 'collected'
@@ -505,24 +574,67 @@
     `).join('');
   }
 
+  // ---------- late-pickup WhatsApp message ----------
+  // Offered from 15 minutes before the cutoff. Opens WhatsApp with the text
+  // filled in; staff still press send themselves.
+  const NUDGE_WINDOW_MS = 15 * 60 * 1000;
+  const WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.4.4 0 0 0 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5.1 5.1 0 0 0 1 2.7 11.6 11.6 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.4-.3Z"/></svg>';
+
+  // South African numbers ("082 123 4567") become international ("27821234567").
+  function intlPhone(raw) {
+    const d = String(raw || '').replace(/\D/g, '');
+    if (d.length === 10 && d.startsWith('0')) return '27' + d.slice(1);
+    if (d.length === 11 && d.startsWith('27')) return d;
+    return d.length >= 10 ? d : null;
+  }
+  // The parent link only goes in the message when this app is reachable from
+  // outside the school network; a LAN address would be a dead link for a parent.
+  function publicOrigin() {
+    const h = location.hostname;
+    const lan = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || h.endsWith('.local') || h === '[::1]';
+    return lan ? null : location.origin;
+  }
+  function nudgeOpen() {
+    return state.stats.cutoff_at && Date.now() >= state.stats.cutoff_at - NUDGE_WINDOW_MS;
+  }
+  function whatsappLink(row) {
+    const child = childFor(row.child_id);
+    const phone = child && intlPhone(child.parent_phone);
+    if (!phone) return null;
+    const kid = firstName(row.full_name);
+    const parent = firstName(row.parent_name);
+    const cutoff = state.stats.cutoff_time || '17:30';
+    const greeting = parent ? `Hi ${parent}, ` : 'Hi, ';
+    let text = Date.now() > state.stats.cutoff_at
+      ? `${greeting}this is Howick Pre-Primary aftercare. It's now past our ${cutoff} closing time and ${kid} is still with us. Please let us know when you expect to arrive.`
+      : `${greeting}this is Howick Pre-Primary aftercare. Just a reminder that aftercare closes at ${cutoff} and ${kid} is still with us.`;
+    const origin = publicOrigin();
+    if (origin && child.parent_token) text += ` You can check on ${kid} here: ${origin}/parent/${child.parent_token}`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  }
+
   function renderPending() {
     const pending = state.today.filter(r => r.status !== 'collected').sort((a, b) => a.checked_in_at - b.checked_in_at);
     el('pendingCount').textContent = pending.length + (pending.length === 1 ? ' child' : ' children');
     el('pendingEmpty').hidden = pending.length !== 0;
+    const showNudge = nudgeOpen();
     el('pendingList').innerHTML = pending.map(r => {
       const cls = r.status === 'late' ? 'late' : (Date.now() - r.checked_in_at > 90 * 60000 ? 'warn' : 'ok');
       const label = fmtElapsed(r.checked_in_at) + (r.status === 'late' ? ' · late' : '');
+      const wa = showNudge ? whatsappLink(r) : null;
       return `
         <div class="pending-item">
           <div class="who">
             <div class="avatar ${avatarClass(r.full_name)}" style="${avatarStyle(r.group_name)}">${escapeHtml(initials(r.full_name))}</div>
-            <div>
-              <div class="child-name">${escapeHtml(r.full_name)}</div>
-              <div class="since">since ${r.checked_in_time}</div>
+            <div class="who-text">
+              <div class="child-name" title="${escapeHtml(r.full_name)}">${escapeHtml(r.full_name)}</div>
+              <div class="meta"><span class="elapsed ${cls}">${label}</span>${r.nudged_time ? `<span>Messaged ${r.nudged_time}</span>` : ''}</div>
             </div>
           </div>
-          <button class="row-action" data-collect="${r.id}" data-name="${escapeHtml(r.full_name)}" style="margin-right:6px;">Collect</button>
-          <span class="elapsed ${cls}">${label}</span>
+          <div class="pending-actions">
+            <button class="btn btn-primary btn-sm" data-collect="${r.id}" data-name="${escapeHtml(r.full_name)}">Collect</button>
+            ${wa ? `<a class="wa-link" href="${wa}" target="_blank" rel="noopener" data-nudge="${r.id}" title="Open WhatsApp with a message to ${escapeHtml(r.parent_name || 'the parent')}">${WA_ICON}Message</a>` : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -533,25 +645,58 @@
 
   el('rosterSearch').addEventListener('input', renderRoster);
 
-  document.addEventListener('click', async (e) => {
-    const collectId = e.target.dataset && e.target.dataset.collect;
-    const uncollectId = e.target.dataset && e.target.dataset.uncollect;
-    const removeId = e.target.dataset && e.target.dataset.remove;
+  function openCollect(attendanceId) {
+    const row = state.today.find(r => String(r.id) === String(attendanceId));
+    if (!row) return;
+    const child = childFor(row.child_id);
+    el('collectAttendanceId').value = row.id;
+    el('collectModalTitle').textContent = 'Record collection — ' + row.full_name;
+    el('collectedByInput').value = '';
+    el('collectError').hidden = true;
+    el('collectOtherForm').hidden = true;
+    el('collectChoose').hidden = false;
+    el('offListBox').hidden = true;
+    document.querySelectorAll('.who-btn').forEach(b => b.classList.remove('who-selected'));
 
-    if (collectId) {
-      el('collectAttendanceId').value = collectId;
-      el('collectModalTitle').textContent = 'Record collection — ' + e.target.dataset.name;
-      el('collectedByInput').value = '';
-      el('collectError').hidden = true;
-      el('collectOtherForm').hidden = true;
-      document.querySelectorAll('.who-btn').forEach(b => b.classList.remove('who-selected'));
-      const row = state.today.find(r => String(r.id) === String(collectId));
-      const suggestions = new Set();
-      if (row && row.parent_name) suggestions.add(row.parent_name);
-      const child = state.children.find(c => c.id === (row && row.child_id));
-      if (child && child.pickup_notes) child.pickup_notes.split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(s => suggestions.add(s));
-      el('pickupSuggestions').innerHTML = [...suggestions].map(s => `<option value="${escapeHtml(s)}">`).join('');
-      openModal('collectModal');
+    const notes = child && child.pickup_notes;
+    el('pickupFile').innerHTML = notes
+      ? `Pickup list on file: <strong>${escapeHtml(notes)}</strong>`
+      : 'No pickup list on file for ' + escapeHtml(firstName(row.full_name)) + '.';
+
+    // Siblings still here today, ticked by default: they usually leave together.
+    const sibs = row.family_id
+      ? state.today.filter(r => r.family_id === row.family_id && r.id !== row.id && r.status !== 'collected')
+      : [];
+    el('siblingBox').hidden = sibs.length === 0;
+    el('siblingList').innerHTML = sibs.map(r => `
+      <label class="sibling-opt">
+        <input type="checkbox" class="sibling-check" value="${r.id}" checked />
+        <span class="avatar ${avatarClass(r.full_name)}" style="${avatarStyle(r.group_name)}">${escapeHtml(initials(r.full_name))}</span>
+        ${escapeHtml(r.full_name)}
+      </label>`).join('');
+
+    const suggestions = new Set();
+    if (row.parent_name) suggestions.add(row.parent_name);
+    if (notes) notes.split(/[,;]/).map(x => x.replace(/\bonly\b/i, '').trim()).filter(Boolean).forEach(x => suggestions.add(x));
+    el('pickupSuggestions').innerHTML = [...suggestions].map(x => `<option value="${escapeHtml(x)}">`).join('');
+    openModal('collectModal');
+  }
+
+  document.addEventListener('click', async (e) => {
+    const target = e.target.closest('[data-collect], [data-uncollect], [data-remove], [data-nudge]');
+    if (!target) return;
+    const collectId = target.dataset.collect;
+    const uncollectId = target.dataset.uncollect;
+    const removeId = target.dataset.remove;
+    const nudgeId = target.dataset.nudge;
+
+    if (collectId) openCollect(collectId);
+
+    if (nudgeId) {
+      // The link itself opens WhatsApp; this just records that it happened.
+      api('/attendance/' + nudgeId + '/nudge', { method: 'POST' })
+        .then(row => { const i = state.today.findIndex(r => r.id === row.id); if (i >= 0) { state.today[i] = row; renderPending(); } })
+        .catch(() => {});
     }
 
     if (uncollectId) {
@@ -566,19 +711,65 @@
     }
   });
 
-  async function submitCollect(collectedBy) {
-    const id = el('collectAttendanceId').value;
+  let pendingWho = null;
+
+  async function submitCollect(collectedBy, override) {
+    const id = Number(el('collectAttendanceId').value);
+    const also = [...document.querySelectorAll('.sibling-check:checked')].map(c => Number(c.value));
     el('collectError').hidden = true;
     try {
-      await api('/attendance/' + id + '/collect', { method: 'POST', body: JSON.stringify({ collected_by: collectedBy }) });
+      const res = await api('/attendance/' + id + '/collect', {
+        method: 'POST',
+        body: JSON.stringify({ collected_by: collectedBy, also_attendance_ids: also, override: !!override })
+      });
+      const ids = res.collected_ids || [id];
+      const names = ids.map(x => { const r = state.today.find(t => t.id === x); return r ? firstName(r.full_name) : null; }).filter(Boolean);
       closeModal('collectModal');
       await loadAll();
-      showToast('Marked collected.');
+      showToast(`${joinNames(names)} collected by ${collectedBy}`, { action: { label: 'Undo', onClick: () => undoCollect(ids) } });
     } catch (err) {
+      if (err.status === 409 && err.body && err.body.code === 'not_on_pickup_list') {
+        showOffList(err.body);
+        return;
+      }
       el('collectError').textContent = err.message;
       el('collectError').hidden = false;
     }
   }
+
+  async function undoCollect(ids) {
+    try {
+      await Promise.all(ids.map(x => api('/attendance/' + x + '/uncollect', { method: 'POST' })));
+      await loadAll();
+      showToast('Collection undone.');
+    } catch (err) { showToast(err.message, true); }
+  }
+
+  // The server said someone isn't on a pickup list: show who and what's on
+  // file, and make releasing anyway a deliberate second tap.
+  function showOffList(body) {
+    pendingWho = body.collected_by;
+    el('offListTitle').textContent = body.error;
+    el('offListDetail').innerHTML = body.children.map(c =>
+      `${escapeHtml(firstName(c.full_name))}'s list: <strong>${escapeHtml(c.pickup_notes || 'none on file')}</strong>`
+    ).join('<br>') + '<br>Check their ID before releasing. The log will show this release wasn\u2019t on the list.';
+    el('offListRelease').textContent = 'Release to ' + body.collected_by + ' anyway';
+    el('collectChoose').hidden = true;
+    el('siblingBox').hidden = true;
+    el('offListBox').hidden = false;
+    el('offListBack').focus();
+  }
+
+  el('offListBack').addEventListener('click', () => {
+    pendingWho = null;
+    el('offListBox').hidden = true;
+    el('collectChoose').hidden = false;
+    el('siblingBox').hidden = el('siblingList').children.length === 0;
+    document.querySelectorAll('.who-btn').forEach(b => b.classList.remove('who-selected'));
+  });
+  el('offListRelease').addEventListener('click', () => {
+    if (pendingWho) submitCollect(pendingWho, true);
+  });
 
   document.querySelectorAll('.who-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -606,6 +797,12 @@
   });
 
   // ---------- new check-in ----------
+  function siblingHint(c) {
+    if (!c.family_id) return '';
+    const sibs = state.children.filter(x => x.family_id === c.family_id && x.id !== c.id).map(x => firstName(x.full_name));
+    return sibs.length ? ` &middot; sibling of ${escapeHtml(joinNames(sibs))}` : '';
+  }
+
   function renderCheckinList() {
     const q = (el('checkinSearch').value || '').toLowerCase().trim();
     const checkedInIds = new Set(state.today.map(r => r.child_id));
@@ -618,7 +815,7 @@
           <div class="avatar ${avatarClass(c.full_name)}" style="${avatarStyle(c.group_name)}">${escapeHtml(initials(c.full_name))}</div>
           <div>
             <div class="child-name">${escapeHtml(c.full_name)}</div>
-            <div class="child-group">${groupBadgeHtml(c.group_name)}</div>
+            <div class="child-group">${groupBadgeHtml(c.group_name)}${siblingHint(c)}</div>
           </div>
         </div>
         <button class="btn btn-primary btn-sm" data-checkin="${c.id}">Check in</button>
@@ -637,10 +834,17 @@
     if (!id) return;
     e.target.disabled = true;
     try {
-      await api('/attendance/check-in', { method: 'POST', body: JSON.stringify({ child_id: Number(id) }) });
+      const row = await api('/attendance/check-in', { method: 'POST', body: JSON.stringify({ child_id: Number(id) }) });
       await loadAll();
       renderCheckinList();
-      showToast('Checked in.');
+      showToast(`${firstName(row.full_name)} checked in`, { action: { label: 'Undo', onClick: async () => {
+        try {
+          await api('/attendance/' + row.id, { method: 'DELETE' });
+          await loadAll();
+          if (!el('checkinModal').hidden) renderCheckinList();
+          showToast(`${firstName(row.full_name)} taken off today's list.`);
+        } catch (err) { showToast(err.message, true); }
+      } } });
     } catch (err) {
       showToast(err.message, true);
       e.target.disabled = false;

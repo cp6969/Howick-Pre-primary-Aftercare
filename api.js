@@ -2,8 +2,9 @@ const express = require('express');
 const db = require('./db');
 const { todaySAST, nowMs, sastArrivalMs, GROUPS, newParentToken } = db;
 const reports = require('./reports');
-const { getSettings, attendanceForDate, attendanceForRange, dayCollectionStatus, buildCsv } = reports;
+const { getSettings, attendanceForDate, attendanceForRange, dayCollectionStatus, buildCsv, cutoffMsFor } = reports;
 const mailer = require('./mailer');
+const { checkPickup } = require('./pickup');
 const scheduler = require('./scheduler');
 
 const router = express.Router();
@@ -31,8 +32,54 @@ function serializeChild(row) {
     // Not a secret from staff -- they already see every child's full record --
     // just the link that opens this one child's no-login Parent View, so the
     // roster screen can offer a "copy parent link" action per child.
-    parent_token: row.parent_token
+    parent_token: row.parent_token,
+    // Siblings are the other children sharing this value (null = none).
+    family_id: row.family_id || null
   };
+}
+
+class HttpError extends Error {
+  constructor(status, message) { super(message); this.status = status; }
+}
+
+// Replaces one child's set of linked siblings. Picking a sibling who is
+// already in a family brings that whole family along (so linking a third
+// child to either of two linked siblings links all three). A family left
+// with a single member is dissolved.
+const setSiblings = db.transaction((childId, siblingIds) => {
+  childId = Number(childId);
+  const ids = [...new Set((siblingIds || []).map(Number))].filter((id) => id && id !== childId);
+  const found = ids.length
+    ? db.prepare(`SELECT id, family_id FROM children WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids)
+    : [];
+  if (found.length !== ids.length) throw new HttpError(400, 'One of the chosen siblings is no longer on the roster.');
+
+  const self = db.prepare('SELECT family_id FROM children WHERE id = ?').get(childId);
+  const touched = new Set();
+  if (self && self.family_id) touched.add(self.family_id);
+  db.prepare('UPDATE children SET family_id = NULL WHERE id = ?').run(childId);
+
+  if (ids.length) {
+    const members = new Set([childId, ...ids]);
+    for (const f of found) {
+      if (!f.family_id) continue;
+      touched.add(f.family_id);
+      db.prepare('SELECT id FROM children WHERE family_id = ?').all(f.family_id).forEach((r) => members.add(r.id));
+    }
+    const familyId = Math.min(...members);
+    const update = db.prepare('UPDATE children SET family_id = ? WHERE id = ?');
+    for (const id of members) update.run(familyId, id);
+  }
+
+  for (const familyId of touched) {
+    const left = db.prepare('SELECT id FROM children WHERE family_id = ?').all(familyId);
+    if (left.length === 1) db.prepare('UPDATE children SET family_id = NULL WHERE id = ?').run(left[0].id);
+  }
+});
+
+function sendError(res, err) {
+  if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
+  throw err;
 }
 
 // ---------- groups ----------
@@ -59,12 +106,18 @@ router.post('/children', (req, res) => {
   if (!group.ok) return res.status(400).json({ error: `Unknown group "${group_name}". Must be one of: ${GROUPS.join(', ')}` });
 
   const now = nowMs();
-  const result = db.prepare(`
-    INSERT INTO children (full_name, group_name, parent_name, parent_phone, pickup_notes, active, created_at, updated_at, parent_token)
-    VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
-  `).run(full_name.trim(), group.value, parent_name || null, parent_phone || null, pickup_notes || null, now, now, newParentToken());
+  let newId;
+  try {
+    db.transaction(() => {
+      newId = db.prepare(`
+        INSERT INTO children (full_name, group_name, parent_name, parent_phone, pickup_notes, active, created_at, updated_at, parent_token)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+      `).run(full_name.trim(), group.value, parent_name || null, parent_phone || null, pickup_notes || null, now, now, newParentToken()).lastInsertRowid;
+      if (Array.isArray(req.body.sibling_ids) && req.body.sibling_ids.length) setSiblings(newId, req.body.sibling_ids);
+    })();
+  } catch (err) { return sendError(res, err); }
 
-  const row = db.prepare('SELECT * FROM children WHERE id = ?').get(result.lastInsertRowid);
+  const row = db.prepare('SELECT * FROM children WHERE id = ?').get(newId);
   res.status(201).json(serializeChild(row));
 });
 
@@ -91,6 +144,10 @@ router.put('/children/:id', (req, res) => {
     nowMs(),
     req.params.id
   );
+
+  if (Array.isArray(req.body.sibling_ids)) {
+    try { setSiblings(req.params.id, req.body.sibling_ids); } catch (err) { return sendError(res, err); }
+  }
 
   const row = db.prepare('SELECT * FROM children WHERE id = ?').get(req.params.id);
   res.json(serializeChild(row));
@@ -148,20 +205,68 @@ router.post('/attendance/check-in', (req, res) => {
   res.status(201).json(row);
 });
 
+// Collects one child, optionally with siblings in the same call
+// (also_attendance_ids), all logged with the same person and time.
+//
+// Each child is checked against their own pickup list (see pickup.js). If
+// anyone is off-list, nothing is saved and this answers 409 with who and
+// why, so the page can warn. Sending the same request again with
+// override: true records the release with off_list = 1 as an audit trail.
 router.post('/attendance/:id/collect', (req, res) => {
-  const existing = db.prepare('SELECT * FROM attendance WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Attendance record not found' });
+  const body = req.body || {};
+  const collectedBy = String(body.collected_by || '').trim();
+  if (!collectedBy) return res.status(400).json({ error: 'collected_by is required' });
 
-  const { collected_by } = req.body || {};
-  if (!collected_by || !collected_by.trim()) return res.status(400).json({ error: 'collected_by is required' });
+  const primaryId = Number(req.params.id);
+  const extraIds = Array.isArray(body.also_attendance_ids) ? body.also_attendance_ids.map(Number) : [];
+  const ids = [...new Set([primaryId, ...extraIds])];
 
-  const collectedAt = req.body.collected_at ? Number(req.body.collected_at) : nowMs();
-  db.prepare(`
-    UPDATE attendance SET collected_at = ?, collected_by = ?, updated_at = ? WHERE id = ?
-  `).run(collectedAt, collected_by.trim(), nowMs(), req.params.id);
+  const lookup = db.prepare(`
+    SELECT a.*, c.full_name, c.parent_name, c.pickup_notes
+    FROM attendance a JOIN children c ON c.id = a.child_id
+    WHERE a.id = ?
+  `);
+  const rows = ids.map((id) => lookup.get(id));
+  if (rows.some((r) => !r)) return res.status(404).json({ error: 'Attendance record not found' });
+  const date = rows[0].date;
+  if (rows.some((r) => r.date !== date)) return res.status(400).json({ error: 'Siblings can only be collected together on the same day.' });
 
-  const row = attendanceForDate(existing.date).find(r => r.id === existing.id);
-  res.json(row);
+  const offList = rows
+    .map((row) => ({ row, check: checkPickup(row, collectedBy) }))
+    .filter((x) => !x.check.ok);
+
+  if (offList.length && !body.override) {
+    const names = offList.map((x) => x.row.full_name.split(' ')[0]);
+    const list = names.length === 1 ? names[0] + '’s' : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] + '’s';
+    return res.status(409).json({
+      error: `${collectedBy} isn’t on ${list} pickup list.`,
+      code: 'not_on_pickup_list',
+      collected_by: collectedBy,
+      children: offList.map((x) => ({
+        attendance_id: x.row.id,
+        full_name: x.row.full_name,
+        pickup_notes: x.row.pickup_notes,
+        allowed: x.check.allowed
+      }))
+    });
+  }
+
+  const offListIds = new Set(offList.map((x) => x.row.id));
+  const collectedAt = body.collected_at ? Number(body.collected_at) : nowMs();
+  const update = db.prepare(`
+    UPDATE attendance SET collected_at = ?, collected_by = ?, off_list = ?, updated_at = ? WHERE id = ?
+  `);
+  db.transaction(() => {
+    for (const row of rows) {
+      // A sibling collected on another device in the meantime keeps its own time.
+      if (row.id !== primaryId && row.collected_at != null) continue;
+      update.run(collectedAt, collectedBy, offListIds.has(row.id) ? 1 : 0, nowMs(), row.id);
+    }
+  })();
+
+  const today = attendanceForDate(date);
+  const primary = today.find((r) => r.id === primaryId);
+  res.json(Object.assign({}, primary, { collected_ids: ids }));
 });
 
 router.post('/attendance/:id/uncollect', (req, res) => {
@@ -169,11 +274,20 @@ router.post('/attendance/:id/uncollect', (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Attendance record not found' });
 
   db.prepare(`
-    UPDATE attendance SET collected_at = NULL, collected_by = NULL, updated_at = ? WHERE id = ?
+    UPDATE attendance SET collected_at = NULL, collected_by = NULL, off_list = 0, updated_at = ? WHERE id = ?
   `).run(nowMs(), req.params.id);
 
   const row = attendanceForDate(existing.date).find(r => r.id === existing.id);
   res.json(row);
+});
+
+// Records that staff opened the late-pickup WhatsApp message for this child,
+// so the "Messaged 17:24" note shows on every device.
+router.post('/attendance/:id/nudge', (req, res) => {
+  const existing = db.prepare('SELECT * FROM attendance WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Attendance record not found' });
+  db.prepare('UPDATE attendance SET nudged_at = ?, updated_at = ? WHERE id = ?').run(nowMs(), nowMs(), req.params.id);
+  res.json(attendanceForDate(existing.date).find((r) => r.id === existing.id));
 });
 
 router.delete('/attendance/:id', (req, res) => {
@@ -209,6 +323,10 @@ router.get('/stats/today', (req, res) => {
     collected_today: collectedToday,
     avg_stay_minutes: avgStayMs != null ? Math.round(avgStayMs / 60000) : null,
     late_collections_7d: lateThisWeek,
+    // The collection cutoff is operational, not a billing rate, so staff get
+    // it here: the tracker uses it to offer the late-pickup message.
+    cutoff_time: settings.cutoff_time || '17:30',
+    cutoff_at: cutoffMsFor(date, settings),
     // Powers both the manual "Export today's log" button (index.html) and
     // is re-derived independently by the daily-log scheduler -- this flag
     // is informational for the UI, never trusted as the actual gate on the

@@ -1,6 +1,6 @@
 const express = require('express');
 const reports = require('./reports');
-const { getSettings, monthlyTallyForAllChildren, attendanceHistoryForChild } = reports;
+const { getSettings, monthlyTallyForAllChildren, attendanceHistoryForChild, familyStatements } = reports;
 
 // Mounted at /api/admin in server.js, behind BOTH the ordinary site-login
 // gate (requireSiteAuthApi, applied to all of /api/*) and the Admin-PIN
@@ -41,6 +41,19 @@ router.get('/children-tally', (req, res) => {
 
 router.get('/children/:id/history', (req, res) => {
   res.json(attendanceHistoryForChild(req.params.id));
+});
+
+// ---------- monthly family statements ----------
+// ?month=YYYY-MM, optional &family=<key> (e.g. "f3" for a linked family or
+// "c7" for a child with no siblings) to get just one statement.
+
+router.get('/statements', (req, res) => {
+  const month = req.query.month || new Date().toISOString().slice(0, 7);
+  try {
+    res.json(familyStatements(month, { familyKey: req.query.family || undefined }));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 module.exports = router;

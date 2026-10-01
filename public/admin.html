@@ -153,9 +153,12 @@
     <div class="panel-head">
       <div>
         <h2>Children — attendance &amp; monthly tally</h2>
-        <p>Days of aftercare attended in the selected month. Click a child to see their full attendance log.</p>
+        <p>Days of aftercare attended in the selected month. Click a child to see their full attendance log, or open their family's statement.</p>
       </div>
-      <span class="count" id="tallyCount" style="font-size:12.5px; color:var(--ink-faint); font-family:var(--font-mono);">—</span>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="count" id="tallyCount" style="font-size:12.5px; color:var(--ink-faint); font-family:var(--font-mono);">—</span>
+        <a class="btn btn-primary btn-sm" id="allStatementsBtn" href="/statement.html" target="_blank" rel="noopener">Print all statements</a>
+      </div>
     </div>
     <div class="search-row">
       <input type="month" id="monthPicker" />
@@ -299,8 +302,11 @@
     return new Date().toISOString().slice(0, 7);
   }
 
+  function selectedMonth() { return el('monthPicker').value || currentMonth(); }
+
   async function loadTally() {
-    const month = el('monthPicker').value || currentMonth();
+    const month = selectedMonth();
+    el('allStatementsBtn').href = '/statement.html?month=' + encodeURIComponent(month);
     const all = el('showArchived').checked ? '1' : '0';
     const result = await api(`/children-tally?month=${encodeURIComponent(month)}&all=${all}`);
     state.tally = result.children;
@@ -322,7 +328,10 @@
         <td>${groupChipHtml(c.group_name)}</td>
         <td><span class="tally-count">${c.days_this_month}</span></td>
         <td><span class="tally-count">${fmtMoney(c.cost_this_month)}</span></td>
-        <td><button class="row-action" data-history="${c.id}" data-name="${escapeHtml(c.full_name)}">View log</button></td>
+        <td style="white-space:nowrap;">
+          <button class="row-action" data-history="${c.id}" data-name="${escapeHtml(c.full_name)}">View log</button>
+          ${c.days_this_month ? `<a class="row-action" style="margin-left:12px; text-decoration:none;" href="/statement.html?month=${encodeURIComponent(selectedMonth())}&family=${encodeURIComponent(c.family_key)}" target="_blank" rel="noopener">Statement</a>` : ''}
+        </td>
       </tr>
     `).join('');
   }
@@ -376,7 +385,7 @@
           <td>${r.collected_time || '—'}</td>
           <td>${escapeHtml(r.collected_by || '—')}</td>
           <td>${fmtMoney(r.total_cost)}</td>
-          <td>${r.late_collection ? '<span class="late-tag">Late</span>' : ''}</td>
+          <td>${r.late_collection ? '<span class="late-tag">Late</span>' : ''}${r.off_list ? ' <span class="late-tag">Not on pickup list</span>' : ''}</td>
         </tr>
       `).join('');
     } catch (err) {
