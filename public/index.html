@@ -161,6 +161,16 @@
   .btn-danger { background: var(--brand-coral); color: #fff; }
   .btn-danger:hover { filter: brightness(1.06); }
 
+  .same-as { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 20px 6px; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 12px; background: var(--surface-2); }
+  .same-as b { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 600; }
+  .same-as span { font-size: 12px; color: var(--ink-soft); }
+  .same-as .btn { flex-shrink: 0; }
+  .same-review { padding: 16px 20px 18px; }
+  .same-review-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .same-review-head .section-hint { margin: 0; }
+  .link-btn { flex-shrink: 0; white-space: nowrap; background: none; border: none; padding: 0; font: inherit; font-size: 12px; font-weight: 600; color: var(--brand-blue); cursor: pointer; }
+  .same-list { max-height: 46vh; overflow-y: auto; margin-bottom: 12px; }
+  .same-actions { display: flex; justify-content: flex-end; gap: 8px; }
   .checklist { max-height: 320px; overflow-y: auto; }
   .checklist-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
   .checklist-item:last-child { border-bottom: none; }
@@ -326,11 +336,28 @@
 <div class="modal-backdrop" id="checkinModal" hidden>
   <div class="modal">
     <div class="modal-head"><h2>Roll call — mark today's attendance</h2><button class="modal-close" data-close="checkinModal">&times;</button></div>
-    <div class="search-row" style="border-bottom:none;">
-      <input type="text" id="checkinSearch" placeholder="Search child…" />
+    <div id="checkinPick">
+      <div class="search-row" style="border-bottom:none;">
+        <input type="text" id="checkinSearch" placeholder="Search child…" />
+      </div>
+      <div class="same-as" id="sameAsBox" hidden>
+        <div><b id="sameAsTitle">Same as yesterday?</b><span id="sameAsSub"></span></div>
+        <button class="btn btn-purple btn-sm" id="sameAsStart">Review list</button>
+      </div>
+      <div class="checklist" id="checkinList"></div>
+      <div class="empty-state" id="checkinEmpty" hidden>Everyone active is already checked in today.</div>
     </div>
-    <div class="checklist" id="checkinList"></div>
-    <div class="empty-state" id="checkinEmpty" hidden>Everyone active is already checked in today.</div>
+    <div class="same-review" id="sameAsReview" hidden>
+      <div class="same-review-head">
+        <p class="section-hint" id="sameAsHint">Untick anyone who isn’t here today.</p>
+        <button class="link-btn" id="sameAsToggle" type="button">Untick all</button>
+      </div>
+      <div class="same-list" id="sameAsList"></div>
+      <div class="same-actions">
+        <button class="btn btn-ghost btn-sm" id="sameAsBack" type="button">Back</button>
+        <button class="btn btn-primary btn-sm" id="sameAsConfirm" type="button">Check in</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -451,7 +478,7 @@
     }
     t.className = 'toast show' + (o.error ? ' error' : '') + (o.action ? ' has-action' : '');
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => { t.className = 'toast'; }, o.action ? 6000 : 2600);
+    showToast._t = setTimeout(() => { t.className = 'toast'; }, o.ms || (o.action ? 6000 : 2600));
   }
 
   function openModal(id) { el(id).hidden = false; }
@@ -823,10 +850,106 @@
     `).join('');
   }
 
+  // ---------- same as yesterday ----------
+  // The children from the last aftercare day (Friday, on a Monday) who
+  // aren't in yet today. Staff review the list, untick anyone absent, and
+  // check the rest in with one tap.
+  const sameAs = { date: null, today: null, childIds: [] };
+
+  function dayLabel(dateStr) {
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  function sameAsName() {
+    const days = Math.round((new Date(sameAs.today + 'T12:00:00') - new Date(sameAs.date + 'T12:00:00')) / 86400000);
+    if (days === 1) return 'yesterday';
+    if (days < 7) return new Date(sameAs.date + 'T12:00:00').toLocaleDateString('en-ZA', { weekday: 'long' });
+    return 'last time';
+  }
+  function sameAsCandidates() {
+    const inToday = new Set(state.today.map(r => r.child_id));
+    const byId = new Map(state.children.map(c => [c.id, c]));
+    return sameAs.childIds.filter(id => !inToday.has(id) && byId.has(id)).map(id => byId.get(id));
+  }
+  function renderSameAsBox() {
+    const kids = sameAs.date ? sameAsCandidates() : [];
+    el('sameAsBox').hidden = !kids.length;
+    if (!kids.length) return;
+    const n = kids.length;
+    el('sameAsTitle').textContent = `Same as ${sameAsName()}?`;
+    el('sameAsSub').textContent = `${n} ${n === 1 ? 'child' : 'children'} from ${dayLabel(sameAs.date)} not in yet`;
+  }
+  function setRollCallMode(review) {
+    el('checkinPick').hidden = review;
+    el('sameAsReview').hidden = !review;
+  }
+  function updateSameAsCount() {
+    const boxes = [...el('sameAsList').querySelectorAll('input')];
+    const n = boxes.filter(b => b.checked).length;
+    const btn = el('sameAsConfirm');
+    btn.textContent = n ? `Check in ${n}` : 'Check in';
+    btn.disabled = !n;
+    el('sameAsToggle').textContent = n === boxes.length ? 'Untick all' : 'Tick all';
+  }
+  function openSameAsReview() {
+    const kids = sameAsCandidates();
+    el('sameAsHint').textContent = `From ${dayLabel(sameAs.date)}. Untick anyone who isn’t here today.`;
+    el('sameAsList').innerHTML = kids.map(c => `
+      <label class="sibling-opt">
+        <input type="checkbox" value="${c.id}" checked />
+        <span class="avatar ${avatarClass(c.full_name)}" style="${avatarStyle(c.group_name)}">${escapeHtml(initials(c.full_name))}</span>
+        <span>${escapeHtml(c.full_name)}</span>
+      </label>`).join('');
+    updateSameAsCount();
+    setRollCallMode(true);
+  }
+
+  el('sameAsStart').addEventListener('click', openSameAsReview);
+  el('sameAsBack').addEventListener('click', () => { setRollCallMode(false); renderSameAsBox(); });
+  el('sameAsList').addEventListener('change', updateSameAsCount);
+  el('sameAsToggle').addEventListener('click', () => {
+    const boxes = [...el('sameAsList').querySelectorAll('input')];
+    const all = boxes.every(b => b.checked);
+    boxes.forEach(b => { b.checked = !all; });
+    updateSameAsCount();
+  });
+  el('sameAsConfirm').addEventListener('click', async () => {
+    const ids = [...el('sameAsList').querySelectorAll('input:checked')].map(b => Number(b.value));
+    if (!ids.length) return;
+    const btn = el('sameAsConfirm');
+    btn.disabled = true;
+    try {
+      const res = await api('/attendance/check-in-many', { method: 'POST', body: JSON.stringify({ child_ids: ids }) });
+      await loadAll();
+      setRollCallMode(false);
+      el('checkinSearch').value = '';
+      renderCheckinList();
+      renderSameAsBox();
+      const created = res.created_ids;
+      if (!created.length) { showToast('They were already checked in.'); return; }
+      showToast(`${created.length} checked in from ${dayLabel(sameAs.date)}`, { ms: 10000, action: { label: 'Undo', onClick: async () => {
+        try {
+          const u = await api('/attendance/undo-check-in', { method: 'POST', body: JSON.stringify({ attendance_ids: created }) });
+          await loadAll();
+          if (!el('checkinModal').hidden) { renderCheckinList(); renderSameAsBox(); }
+          showToast(u.kept ? `${u.removed} taken off today's list (${u.kept} already collected, kept).` : `${u.removed} taken off today's list.`);
+        } catch (err) { showToast(err.message, true); }
+      } } });
+    } catch (err) {
+      showToast(err.message, true);
+      updateSameAsCount();
+    }
+  });
+
   el('newCheckinBtn').addEventListener('click', () => {
     el('checkinSearch').value = '';
+    setRollCallMode(false);
     renderCheckinList();
+    el('sameAsBox').hidden = true;
     openModal('checkinModal');
+    api('/attendance/previous-day').then(d => {
+      sameAs.date = d.date; sameAs.today = d.today; sameAs.childIds = d.child_ids;
+      if (!el('checkinModal').hidden && !el('checkinPick').hidden) renderSameAsBox();
+    }).catch(() => {});
   });
   el('checkinSearch').addEventListener('input', renderCheckinList);
   el('checkinList').addEventListener('click', async (e) => {
@@ -837,11 +960,12 @@
       const row = await api('/attendance/check-in', { method: 'POST', body: JSON.stringify({ child_id: Number(id) }) });
       await loadAll();
       renderCheckinList();
+      renderSameAsBox();
       showToast(`${firstName(row.full_name)} checked in`, { action: { label: 'Undo', onClick: async () => {
         try {
           await api('/attendance/' + row.id, { method: 'DELETE' });
           await loadAll();
-          if (!el('checkinModal').hidden) renderCheckinList();
+          if (!el('checkinModal').hidden) { renderCheckinList(); renderSameAsBox(); }
           showToast(`${firstName(row.full_name)} taken off today's list.`);
         } catch (err) { showToast(err.message, true); }
       } } });

@@ -23,6 +23,9 @@ decisions already made, and what's still outstanding.
     warning, and it's recorded.
   - **Linked siblings**: collect brothers and sisters in one tap; they share one
     monthly statement.
+  - **Same as yesterday**: Roll Call can start from the last aftercare day's
+    list (Friday's, on a Monday); untick anyone who isn't here and check the
+    rest in with one tap.
   - **Undo** after every collect and roll-call check-in.
   - **Late-pickup WhatsApp message** to the parent from 15 minutes before
     closing, marked "Messaged" so other staff can see it's been done.

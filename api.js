@@ -205,6 +205,60 @@ router.post('/attendance/check-in', (req, res) => {
   res.status(201).json(row);
 });
 
+// "Same as yesterday": who came on the most recent earlier aftercare day
+// (so on a Monday that's Friday, after a holiday it's the last day open).
+// Archived children are left out; the page drops anyone already in today.
+router.get('/attendance/previous-day', (req, res) => {
+  const today = todaySAST();
+  const prev = db.prepare('SELECT MAX(date) AS date FROM attendance WHERE date < ?').get(today).date;
+  if (!prev) return res.json({ today, date: null, child_ids: [] });
+  const childIds = db.prepare(`
+    SELECT a.child_id FROM attendance a JOIN children c ON c.id = a.child_id
+    WHERE a.date = ? AND c.active = 1 ORDER BY c.full_name COLLATE NOCASE
+  `).all(prev).map((r) => r.child_id);
+  res.json({ today, date: prev, child_ids: childIds });
+});
+
+// Checks in several children at once (roll call's "same as yesterday").
+// Children already in today are left as they are; archived or unknown ids
+// are skipped (counted in "skipped"). Answers with the attendance ids this
+// call created, which is exactly what an undo should remove.
+router.post('/attendance/check-in-many', (req, res) => {
+  const ids = (req.body || {}).child_ids;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'child_ids must be a non-empty list' });
+  const childIds = [...new Set(ids.map(Number))].filter((id) => Number.isInteger(id) && id > 0);
+
+  const date = todaySAST();
+  const now = nowMs();
+  const isActive = db.prepare('SELECT 1 FROM children WHERE id = ? AND active = 1');
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO attendance (child_id, date, checked_in_at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  const createdIds = db.transaction(() => {
+    const out = [];
+    for (const id of childIds) {
+      if (!isActive.get(id)) continue;
+      const r = insert.run(id, date, sastArrivalMs(date), now, now);
+      if (r.changes) out.push(Number(r.lastInsertRowid));
+    }
+    return out;
+  })();
+
+  res.status(201).json({ created_ids: createdIds, skipped: childIds.length - createdIds.length });
+});
+
+// Undo for check-in-many. Only today's rows that haven't been collected yet
+// are removed, so a child collected in the meantime keeps their record.
+router.post('/attendance/undo-check-in', (req, res) => {
+  const ids = (req.body || {}).attendance_ids;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'attendance_ids must be a non-empty list' });
+  const del = db.prepare('DELETE FROM attendance WHERE id = ? AND date = ? AND collected_at IS NULL');
+  const date = todaySAST();
+  const removed = db.transaction(() => ids.reduce((n, id) => n + del.run(Number(id), date).changes, 0))();
+  res.json({ removed, kept: ids.length - removed });
+});
+
 // Collects one child, optionally with siblings in the same call
 // (also_attendance_ids), all logged with the same person and time.
 //

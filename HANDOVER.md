@@ -29,7 +29,8 @@ ever see references to `13-Industries` in old conversation history, that's why.
   live cost tally, school logo, Parent View, header wordmark.
 - **Branch `claude/pickup-safety-siblings-statements`** adds the "missing
   features" round (see §7): pickup-list check, linked siblings, undo, late
-  pickup WhatsApp message, monthly family statements, plus four layout fixes.
+  pickup WhatsApp message, monthly family statements, "same as yesterday"
+  roll call, plus four layout fixes.
   Not merged yet -- check whether it has a PR. After merging, the Unraid box
   needs `git pull` + `docker build` + recreate the container to pick it up
   (the DB migrates itself on start; see §5).
@@ -146,6 +147,15 @@ new column -- never edit the `CREATE TABLE` alone.
   list. Siblings share one statement.
 - **Undo**. Collect and roll-call check-in both show a toast with Undo for
   6 s (uncollect / delete the attendance row).
+- **"Same as yesterday" roll call**. Roll Call offers the children from the
+  most recent earlier aftercare day (Friday, on a Monday; the last open day
+  after a holiday) who aren't in yet today. "Review list" shows them all
+  ticked; staff untick anyone absent and check the rest in with one tap,
+  then add anyone extra one by one as before. Archived children are left out.
+  `GET /api/attendance/previous-day` -> `{today, date, child_ids}`;
+  `POST /api/attendance/check-in-many {child_ids}` -> `{created_ids, skipped}`;
+  Undo (10 s) calls `POST /api/attendance/undo-check-in {attendance_ids}`,
+  which only removes today's rows that haven't been collected yet.
 - **Late-pickup WhatsApp message**. Rows in "Awaiting pickup" get a Message
   link from 15 min before the cutoff: a `wa.me` link to the parent's phone
   (SA `0xx` -> `27xx`) with a polite pre-filled message. It deliberately makes
@@ -216,8 +226,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"        
 
 - Merge the features branch (§6) and redeploy on Unraid.
 - **Pick a design direction** (parked, see §2).
-- Feature ideas offered but not built yet: "same as yesterday" roll call,
-  find-a-child search on the tracker, per-day notes / allergy flags on the
+- Feature ideas offered but not built yet: find-a-child search on the tracker, per-day notes / allergy flags on the
   roster, installable PWA (home-screen icon), kiosk mode for a wall tablet.
 - Public URL on a `howickpreprimary.co.za` subdomain: only if the school gets
   that domain onto Cloudflare; swap the route in the same tunnel, no app
