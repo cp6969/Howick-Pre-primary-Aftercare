@@ -853,7 +853,7 @@
     return sibs.length ? ` &middot; sibling of ${escapeHtml(joinNames(sibs))}` : '';
   }
 
-  // Roll call filters: sort A-Z or by hours this month ("Most frequent"),
+  // Roll call filters: sort A-Z or by hours in the last 30 days ("Most frequent"),
   // and narrow to one class. Remembered on this device between opens.
   const rc = { sort: 'az', group: '', hours: {} };
   try {
@@ -893,7 +893,7 @@
     el('checkinEmpty').hidden = available.length !== 0;
     el('checkinList').innerHTML = available.map(c => {
       const h = rc.hours[c.id] || 0;
-      const hours = rc.sort === 'frequent' ? `<span class="rc-hours-sep"> &middot; </span><span class="rc-hours">${h ? fmtHours(h) + ' this month' : 'none yet this month'}</span>` : '';
+      const hours = rc.sort === 'frequent' ? `<span class="rc-hours-sep"> &middot; </span><span class="rc-hours">${h ? fmtHours(h) + ' in the last 30 days' : 'none in the last 30 days'}</span>` : '';
       return `
       <div class="checklist-item">
         <div class="who">
@@ -1021,7 +1021,7 @@
     el('sameAsBox').hidden = true;
     openModal('checkinModal');
     if (!state.groups) api('/groups').then(g => { state.groups = g; syncCheckinFilters(); }).catch(() => {});
-    api('/attendance/month-hours').then(d => {
+    api('/attendance/recent-hours').then(d => {
       rc.hours = d.hours || {};
       if (!el('checkinModal').hidden && rc.sort === 'frequent') renderCheckinList();
     }).catch(() => {});

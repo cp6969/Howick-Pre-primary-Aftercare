@@ -220,17 +220,21 @@ router.get('/attendance/previous-day', (req, res) => {
 });
 
 // Roll call's "Most frequent" sort: hours each child has spent at aftercare
-// so far this month (13:00 to collection; days not yet collected don't
-// count). Hours only, no money -- this is the staff side, not Admin.
-router.get('/attendance/month-hours', (req, res) => {
-  const month = todaySAST().slice(0, 7);
+// over the last 30 days, today included (13:00 to collection; days not yet
+// collected don't count). A rolling window rather than the calendar month,
+// so the ranking still means something on the 1st. Hours only, no money --
+// this is the staff side, not Admin.
+const RECENT_DAYS = 30;
+router.get('/attendance/recent-hours', (req, res) => {
+  const to = todaySAST();
+  const from = new Date(Date.parse(to + 'T12:00:00Z') - (RECENT_DAYS - 1) * 86400000).toISOString().slice(0, 10);
   const rows = db.prepare(`
     SELECT child_id, SUM(collected_at - checked_in_at) AS ms FROM attendance
-    WHERE date LIKE ? AND collected_at IS NOT NULL GROUP BY child_id
-  `).all(month + '-%');
+    WHERE date BETWEEN ? AND ? AND collected_at IS NOT NULL GROUP BY child_id
+  `).all(from, to);
   const hours = {};
   for (const r of rows) hours[r.child_id] = Math.round(Math.max(r.ms, 0) / 360000) / 10;
-  res.json({ month, hours });
+  res.json({ from, to, days: RECENT_DAYS, hours });
 });
 
 // Checks in several children at once (roll call's "same as yesterday").
