@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aftercare Statements — Howick Pre-Primary</title>
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/theme.css">
+<style>
+  /* A statement is a paper document: the sheets stay white with fixed ink in
+     every theme so what's on screen is exactly what prints. Only the toolbar
+     around them follows the app theme. */
+  :root {
+    --sheet: #FFFFFF;
+    --sheet-ink: #232C20;
+    --sheet-soft: #5B6355;
+    --sheet-faint: #8C9385;
+    --sheet-line: #E3E6DE;
+    --sheet-band: #F3F6F0;
+    --sheet-green: #2E8A28;
+    --sheet-late: #B5362D;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+
+  .toolbar { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .toolbar-inner { max-width: 860px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .toolbar h1 { font-family: var(--font-display); font-size: 17px; font-weight: 600; margin: 0; flex: 1; min-width: 180px; }
+  .toolbar .sub { display: block; font-family: var(--font-body); font-size: 12.5px; font-weight: 400; color: var(--ink-faint); margin-top: 1px; }
+  .toolbar input[type="month"] { font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .btn { appearance: none; border: none; cursor: pointer; font-family: var(--font-display); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 999px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+  .btn:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+  .btn-primary { background: var(--brand-purple); color: var(--brand-purple-ink); }
+  .btn-ghost { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line-strong); }
+
+  .sheets { max-width: 860px; margin: 0 auto; padding: 24px 16px 56px; display: flex; flex-direction: column; gap: 24px; }
+  .note { text-align: center; color: var(--ink-faint); font-size: 14px; padding: 40px 0; }
+
+  .sheet { background: var(--sheet); color: var(--sheet-ink); border-radius: 6px; box-shadow: var(--shadow); padding: 40px 44px 36px; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding-bottom: 18px; border-bottom: 2px solid var(--sheet-ink); }
+  .school { display: flex; align-items: center; gap: 14px; }
+  .school img { width: 64px; height: 64px; object-fit: contain; }
+  .school-name { font-family: var(--font-display); font-weight: 700; font-size: 20px; line-height: 1.1; color: var(--sheet-green); }
+  .school-sub { font-size: 12px; color: var(--sheet-soft); margin-top: 2px; }
+  .doc-title { text-align: right; }
+  .doc-title .kind { font-family: var(--font-display); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--sheet-faint); }
+  .doc-title .month { font-family: var(--font-display); font-size: 22px; font-weight: 600; margin-top: 2px; }
+  .doc-title .issued { font-size: 12px; color: var(--sheet-soft); margin-top: 2px; }
+
+  .billto { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding: 18px 0 14px; }
+  .billto .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--sheet-faint); font-weight: 600; font-family: var(--font-display); }
+  .billto .who { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin-top: 2px; }
+  .billto .for { font-size: 13px; color: var(--sheet-soft); margin-top: 2px; }
+  .summary { display: flex; gap: 26px; text-align: right; }
+  .summary .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; margin-top: 3px; }
+  .summary .due .v { font-size: 22px; color: var(--sheet-ink); }
+
+  .kid { margin-top: 14px; }
+  .kid-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 10px; background: var(--sheet-band); border-radius: 6px; }
+  .kid-head b { font-family: var(--font-display); font-size: 14.5px; font-weight: 600; }
+  .kid-head span { font-size: 12px; color: var(--sheet-soft); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; }
+  th { text-align: right; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sheet-faint); font-weight: 600; font-family: var(--font-display); padding: 7px 10px; border-bottom: 1px solid var(--sheet-line); white-space: nowrap; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--sheet-line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.num { font-family: var(--font-mono); font-size: 12px; }
+  td .late { color: var(--sheet-late); font-weight: 600; }
+  td .open { color: var(--sheet-faint); font-style: italic; }
+  tr.subtotal td { border-bottom: none; font-weight: 700; padding-top: 8px; }
+  tr.subtotal td.num { text-align: right; }
+  .table-scroll { overflow-x: auto; }
+
+  .grand { display: flex; justify-content: flex-end; align-items: baseline; gap: 16px; margin-top: 18px; padding-top: 12px; border-top: 2px solid var(--sheet-ink); }
+  .grand span { font-family: var(--font-display); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .grand b { font-family: var(--font-mono); font-size: 20px; font-variant-numeric: tabular-nums; }
+  .terms { margin-top: 22px; font-size: 11.5px; line-height: 1.6; color: var(--sheet-soft); max-width: 66ch; }
+
+  @media (max-width: 640px) {
+    .sheet { padding: 24px 18px; }
+    .sheet-head { flex-direction: column; }
+    .doc-title { text-align: left; }
+    .summary { text-align: left; flex-wrap: wrap; gap: 16px; }
+  }
+
+  @page { size: A4; margin: 14mm; }
+  @media print {
+    html, body { background: #fff; }
+    .toolbar { display: none; }
+    .sheets { padding: 0; max-width: none; gap: 0; display: block; }
+    .sheet { box-shadow: none; border-radius: 0; padding: 0; break-after: page; page-break-after: always; }
+    .sheet:last-child { break-after: auto; page-break-after: auto; }
+    .kid, tr { break-inside: avoid; page-break-inside: avoid; }
+    .table-scroll { overflow: visible; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <a class="btn btn-ghost" href="/admin.html">&larr; Admin</a>
+    <h1 id="title">Aftercare statements<span class="sub" id="subtitle">Loading…</span></h1>
+    <label for="monthPicker" style="font-size:12.5px; color:var(--ink-soft);">Month</label>
+    <input type="month" id="monthPicker" />
+    <a class="btn btn-ghost" id="allLink" href="#" hidden>All families</a>
+    <button class="btn btn-primary" id="printBtn" type="button">Print or save as PDF</button>
+  </div>
+</div>
+
+<main class="sheets" id="sheets"></main>
+
+<script>
+(function () {
+  'use strict';
+  const el = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const month = /^\d{4}-\d{2}$/.test(params.get('month') || '') ? params.get('month') : new Date().toISOString().slice(0, 7);
+  const family = params.get('family') || '';
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function money(cur, n) {
+    return cur + ' ' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function dayLabel(iso) {
+    const d = new Date(iso + 'T00:00:00Z');
+    return d.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  }
+  function issuedLabel(iso) {
+    return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
+  function hours(n) { return (Number(n) || 0).toFixed(2) + ' h'; }
+  function names(list) {
+    return list.length <= 1 ? (list[0] || '') : list.slice(0, -1).join(', ') + ' & ' + list[list.length - 1];
+  }
+
+  function sheetHtml(f, data) {
+    const cur = data.rates.currency;
+    const parent = f.parent_names.length ? names(f.parent_names) : 'Parent / guardian';
+    const kids = f.children.map(k => k.full_name.split(' ')[0]);
+    const kidsHtml = f.children.map(k => `
+      <section class="kid">
+        <div class="kid-head"><b>${esc(k.full_name)}</b><span>${esc(k.group_name || '')}${k.group_name ? ' · ' : ''}${k.days.length} day${k.days.length === 1 ? '' : 's'}</span></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Date</th><th>Collected</th><th>Billed</th><th>Aftercare</th><th>Late fee</th><th>Total</th></tr></thead>
+            <tbody>
+              ${k.days.map(d => `
+                <tr>
+                  <td>${esc(dayLabel(d.date))}</td>
+                  <td>${d.open ? '<span class="open">still at aftercare</span>' : esc(d.collection) + (d.late_blocks ? ' <span class="late">late</span>' : '')}</td>
+                  <td class="num">${hours(d.billed_hours)}</td>
+                  <td class="num">${money(cur, d.base_charge)}</td>
+                  <td class="num">${d.late_fee ? `<span class="late">${money(cur, d.late_fee)}</span>` : '—'}</td>
+                  <td class="num">${money(cur, d.total)}</td>
+                </tr>`).join('')}
+              <tr class="subtotal"><td colspan="5">${esc(k.full_name.split(' ')[0])}'s total</td><td class="num">${money(cur, k.subtotal)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>`).join('');
+
+    const r = data.rates;
+    return `
+      <article class="sheet">
+        <header class="sheet-head">
+          <div class="school">
+            <img src="/logo.png" alt="Howick Pre-Primary &amp; Baby Centre logo" />
+            <div><div class="school-name">Howick Pre-Primary<br>&amp; Baby Centre</div><div class="school-sub">Aftercare</div></div>
+          </div>
+          <div class="doc-title">
+            <div class="kind">Aftercare statement</div>
+            <div class="month">${esc(data.month_label)}</div>
+            <div class="issued">Issued ${esc(issuedLabel(data.generated_on))}</div>
+          </div>
+        </header>
+        <div class="billto">
+          <div>
+            <div class="label">Statement for</div>
+            <div class="who">${esc(parent)}</div>
+            <div class="for">Aftercare for ${esc(names(kids))}${f.parent_phone ? ' · ' + esc(f.parent_phone) : ''}</div>
+          </div>
+          <div class="summary">
+            <div><div class="label">Days</div><div class="v">${f.days}</div></div>
+            <div><div class="label">Late fees</div><div class="v">${money(cur, f.late_fees)}</div></div>
+            <div class="due"><div class="label">Amount due</div><div class="v">${money(cur, f.total)}</div></div>
+          </div>
+        </div>
+        ${kidsHtml}
+        <div class="grand"><span>Amount due</span><b>${money(cur, f.total)}</b></div>
+        <p class="terms">Aftercare starts at 13:00 and is billed at ${money(cur, r.hourly_rate)} per hour, with a minimum of ${r.daily_minimum_hours} hour${r.daily_minimum_hours === 1 ? '' : 's'} per day.${r.late_fee_per_block ? ` Collections after ${esc(r.cutoff_time)} are charged ${money(cur, r.late_fee_per_block)} for each 15 minutes or part of 15 minutes.` : ''} Please speak to the aftercare office if anything on this statement looks wrong.</p>
+      </article>`;
+  }
+
+  async function load() {
+    el('monthPicker').value = month;
+    el('allLink').hidden = !family;
+    el('allLink').href = '/statement.html?month=' + encodeURIComponent(month);
+    const res = await fetch('/api/admin/statements?month=' + encodeURIComponent(month) + (family ? '&family=' + encodeURIComponent(family) : ''));
+    if (res.status === 401) { location.href = '/login.html'; return; }
+    if (res.status === 403) { location.href = '/admin-login.html'; return; }
+    if (!res.ok) { el('sheets').innerHTML = '<p class="note">Couldn’t load statements. Check the month and try again.</p>'; return; }
+    const data = await res.json();
+    const n = data.families.length;
+    el('subtitle').textContent = data.month_label + ' · ' + (family ? 'one family' : n + (n === 1 ? ' family' : ' families')) + ' · ' + money(data.rates.currency, data.families.reduce((a, f) => a + f.total, 0)) + ' total';
+    el('printBtn').disabled = n === 0;
+    el('sheets').innerHTML = n
+      ? data.families.map(f => sheetHtml(f, data)).join('')
+      : `<p class="note">No aftercare was recorded in ${esc(data.month_label)}${family ? ' for this family' : ''}, so there are no statements to print.</p>`;
+    document.title = (family && n ? data.families[0].parent_names[0] + ' — ' : '') + 'Aftercare ' + data.month_label;
+  }
+
+  el('monthPicker').addEventListener('change', () => {
+    const m = el('monthPicker').value;
+    if (m) location.search = '?month=' + encodeURIComponent(m) + (family ? '&family=' + encodeURIComponent(family) : '');
+  });
+  el('printBtn').addEventListener('click', () => window.print());
+  load().catch(() => { el('sheets').innerHTML = '<p class="note">Couldn’t load statements.</p>'; });
+})();
+</script>
+</body>
+</html>

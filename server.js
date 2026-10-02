@@ -148,6 +148,9 @@ app.get('/admin-login.html', (req, res) => {
 app.get('/admin.html', requireAdminAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
+app.get('/statement.html', requireAdminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'statement.html'));
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 

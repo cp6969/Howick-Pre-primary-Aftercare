@@ -16,7 +16,25 @@ decisions already made, and what's still outstanding.
   **Roll Call** each afternoon (tap a child's name to add them to today's list;
   arrival is always stamped 13:00, since that's when aftercare starts), then taps
   **Collect** as each child leaves and picks **Mother / Father / Other**. The
-  collection timestamp is logged automatically.
+  collection timestamp is logged automatically. Also:
+  - **Pickup-list check**: warns before releasing a child to someone not on
+    their authorized-pickups list ("Father only" means Mother is flagged; with
+    no "only", parents are always fine). Staff can still release after the
+    warning, and it's recorded.
+  - **Linked siblings**: collect brothers and sisters in one tap; they share one
+    monthly statement.
+  - **Same as yesterday**: Roll Call can start from the last aftercare day's
+    list (Friday's, on a Monday); untick anyone who isn't here and check the
+    rest in with one tap.
+  - **Roll call filters**: sort A–Z or by most hours in the last 30 days, and show one
+    class at a time.
+  - **Undo** after every collect and roll-call check-in.
+  - **Late-pickup WhatsApp message** to the parent from 15 minutes before
+    closing, marked "Messaged" so other staff can see it's been done.
+  - **Admin** (second PIN): billing rates, monthly tally per child, attendance
+    history, and **printable monthly family statements** (save as PDF).
+  - **Parent View**: a private no-login link per child for parents.
+  - Optional **daily log email** once everyone's been collected.
 - **`mockup.html`** — the original static design concept, kept for reference.
 - **`Howick-Aftercare-Billing.xlsx`** — companion billing workbook (Rates & Settings
   → Daily Log → Billing Summary → per-child Invoice). The app's CSV export
@@ -64,7 +82,7 @@ git clone https://github.com/cp6969/Howick-Pre-primary-Aftercare.git howick-afte
 cd howick-aftercare
 
 cp .env.example .env
-# edit .env: fill in APP_USERNAME, APP_PASSWORD_HASH, SESSION_SECRET
+# edit .env: fill in APP_USERNAME, APP_PASSWORD_HASH, ADMIN_PIN_HASH, SESSION_SECRET
 # (leave TUNNEL_TOKEN blank -- not needed for LAN-only)
 
 docker build -t howick-aftercare:latest .
@@ -98,8 +116,11 @@ by swapping the route in the same tunnel — no app changes needed.
   `checked_in_at` is always 13:00 SAST on that date; `collected_at` /
   `collected_by` are filled in when they're picked up. A child who didn't attend
   a given day simply has no row — there's nothing to mark absent.
-- **settings** — collection cutoff time, hourly rate, late fee, currency. Read by
-  the API for the "late collection" flag and available for a future billing
-  calculator; not yet exposed in the UI.
+- **settings** — collection cutoff time, hourly rate, daily minimum hours, late
+  fee per 15 minutes, currency (edited on the Admin page), plus the daily-email
+  settings.
+
+New columns are added automatically on start-up, so updating is just `git pull`,
+`docker build`, and recreating the container; the database in `data/` is kept.
 
 Live and running on the school's Unraid box at https://hpps.burgtec.co.za.

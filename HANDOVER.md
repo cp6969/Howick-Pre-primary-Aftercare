@@ -20,19 +20,23 @@ ever see references to `13-Industries` in old conversation history, that's why.
 
 ## 2. Status right now
 
-- **App is fully built and tested** (login, roll call, collect, CSV export —
-  exercised both via curl and a real headless-browser Playwright pass) and
-  pushed to `main`. Latest commit at time of writing: `16f6bf1`.
-- **Not yet deployed anywhere.** The user asked to deploy to their Unraid box;
-  this session has no SSH/remote access to that hardware, so instead I fixed a
-  real port collision (see §6), generated deployment secrets, and handed the
-  user a copy-paste runbook in chat (also in `README.md`). **Unconfirmed
-  whether they've actually run it yet** — that's the natural next thing to
-  check in on if picking this up.
-- Decided explicitly: **LAN-only for now** (`http://<unraid-ip>:8092`). Public
-  URL is planned for later on a `howickpreprimary.co.za` subdomain, but that's
-  blocked on confirming someone (the user or the school) actually manages that
-  domain's DNS in Cloudflare — not yet confirmed.
+- **Live and in use** on the school's Unraid box: LAN at
+  `http://<unraid-ip>:8092`, public at **https://hpps.burgtec.co.za** via a
+  Cloudflare Tunnel (the `cloudflared` service in `docker-compose.yml`).
+  `8090` turned out to be taken on that box, so `8092` is the real port --
+  ignore any older mention of 8090.
+- Merged to `main` via PRs #1-#6: Admin area (PIN-gated), daily-log email,
+  live cost tally, school logo, Parent View, header wordmark.
+- **Branch `claude/pickup-safety-siblings-statements`** adds the "missing
+  features" round (see §7): pickup-list check, linked siblings, undo, late
+  pickup WhatsApp message, monthly family statements, "same as yesterday"
+  roll call, plus four layout fixes.
+  Not merged yet -- check whether it has a PR. After merging, the Unraid box
+  needs `git pull` + `docker build` + recreate the container to pick it up
+  (the DB migrates itself on start; see §5).
+- **Visual redesign is parked.** Four directions were mocked up (A Studio,
+  B Playground, C Pickup Board, D Pocket) in a claude.ai artifact; the user
+  said "we'll come back to the design". Don't start one without asking which.
 
 ## 3. Key decisions already made (don't re-litigate without reason)
 
@@ -66,52 +70,120 @@ Asked the user explicitly, answers below — these shaped the whole build:
 ## 4. Project structure
 
 ```
-server.js          -- Express app, shared-login session gate (mirrors
-                       13-Industries' pattern, minus the Google OAuth bits --
-                       this app doesn't need Drive/Gmail integration)
-api.js              -- all /api/* routes (children, attendance, stats, settings,
-                       CSV export)
-db.js               -- SQLite schema + SAST (Africa/Johannesburg, UTC+2,
-                       no-DST) date helpers -- deliberately not relying on the
-                       server's local timezone, since a Docker container
-                       usually defaults to UTC
-session-store.js    -- better-sqlite3-backed express-session store, copied
-                       verbatim from 13-Industries (no changes needed)
-public/index.html   -- the whole live app: dashboard, roll call modal, collect
-                       modal, manage-children admin panel. Vanilla JS, no
-                       framework, single <script> block -- same convention as
-                       13-Industries' public/index.html
-public/login.html   -- login page, restyled to Howick branding
-public/fonts.css    -- Jost + Open Sans embedded as base64 @font-face (~330KB),
-                       shared by both HTML pages via <link>
-mockup.html         -- the original static design concept. Kept for reference,
-                       not used by the running app.
+server.js          -- Express app: shared-login session gate, admin PIN gate
+                       (requireAdminAuth / requireAdminAuthApi), Parent View
+                       routes (/parent/:token, no login)
+api.js              -- staff /api/* routes: children (incl. siblings), roll
+                       call, collect (with pickup check), undo, nudge, stats,
+                       CSV export, daily-log email settings
+admin.js            -- /api/admin/* (PIN-gated): billing rates, monthly tally,
+                       per-child history, family statements
+reports.js          -- shared queries + billing maths (costForRow, monthly
+                       tally, CSV, familyStatements)
+pickup.js           -- checkPickup(): is this person on the child's pickup list?
+db.js               -- SQLite schema, migrations (addColumnIfMissing), demo
+                       seed, SAST (UTC+2, no DST) date helpers
+mailer.js, scheduler.js
+                    -- optional automatic "today's log" email (nodemailer)
+session-store.js    -- better-sqlite3-backed express-session store
+public/index.html   -- tracker: stats, awaiting pickup, roster, roll call,
+                       collect modal. Vanilla JS, single <script> block
+public/settings.html-- manage children (siblings, parent links), daily email
+public/admin.html   -- rates, monthly tally, history, statement links
+public/statement.html
+                    -- printable A4 family statements (admin-gated)
+public/parent.html  -- Parent View
+public/theme.css, fonts.css, group-colors.js, logo.png -- shared styling
+mockup.html         -- original static design concept, not used by the app
 Howick-Aftercare-Billing.xlsx
-                    -- companion billing workbook (Rates & Settings -> Daily
-                       Log -> Billing Summary -> per-child Invoice). The app's
-                       CSV export (/api/attendance/export.csv) is formatted to
-                       paste straight into its Daily Log tab.
+                    -- companion billing workbook; the CSV export pastes
+                       straight into its Daily Log tab
 Dockerfile, docker-compose.yml, .env.example, .gitignore
-                    -- deployment scaffolding, same shape as 13-Industries
 ```
 
 ## 5. Data model
 
-- **`children`** — the school roster: `full_name`, `group_name`, `parent_name`,
+- **`children`** -- the roster: `full_name`, `group_name`, `parent_name`,
   `parent_phone`, `pickup_notes` (free text, comma-separated authorized
-  pickups), `active` (soft-delete flag — archiving instead of deleting keeps
-  attendance history intact).
-- **`attendance`** — one row per child per day they actually attended.
+  pickups), `active` (soft-delete; archiving keeps history), `parent_token`
+  (the secret in a Parent View link), `family_id` (siblings share one value,
+  the lowest child id in the family; NULL = no linked siblings).
+- **`attendance`** -- one row per child per day they actually attended.
   `checked_in_at` always = 13:00 SAST on `date` (see §3). `collected_at` /
-  `collected_by` filled in on collection. `UNIQUE(child_id, date)` — Roll Call
-  is idempotent, tapping an already-checked-in child again just returns the
-  existing row.
-- **`settings`** — key/value: `cutoff_time` (17:30 default, drives the "late
-  collection" flag), `hourly_rate`, `late_fee_per_block`, `currency`. Read by
-  the API for stats; **not yet exposed in the UI** — would need a settings
-  screen if the user wants to change these without editing the DB directly.
+  `collected_by` filled in on collection. `off_list` = 1 when staff released
+  the child to someone not on the pickup list after the warning (audit trail,
+  shown in the roster, history and CSV). `nudged_at` = when staff last opened
+  the late-pickup WhatsApp message. `UNIQUE(child_id, date)`, so Roll Call is
+  idempotent.
+- **`settings`** -- key/value: `cutoff_time` (17:30), `hourly_rate`,
+  `daily_minimum_hours`, `late_fee_per_block` (per 15 min or part past the
+  cutoff), `currency`, plus the daily-log email settings. Rates are edited on
+  the Admin page.
 
-## 6. Real bugs hit and fixed during development
+Columns added after launch go through `addColumnIfMissing()` in `db.js`, which
+runs on every start, so a deployed database upgrades itself. Use that for any
+new column -- never edit the `CREATE TABLE` alone.
+
+## 6. Features added after launch (branch `claude/pickup-safety-siblings-statements`)
+
+- **Pickup-list check** (`pickup.js`). When Collect is tapped, the person is
+  checked against the child's `pickup_notes`:
+  - Empty notes = no list on file, never flagged.
+  - Any entry containing "only" makes the list strict ("Father only" means
+    Mother *is* flagged).
+  - Otherwise parents are always allowed (Mother, Father, or `parent_name`),
+    plus everyone listed.
+  - "Grandmother (Nomsa)" matches "Grandmother", "Nomsa" or the whole entry.
+  - Not on the list: `POST /api/attendance/:id/collect` returns **409**
+    `code: 'not_on_pickup_list'`; the modal shows a warning and staff can go
+    back or "Release anyway", which resends with `override: true` and stores
+    `off_list = 1`. It's a warning, not a hard block, on purpose -- staff know
+    the families.
+- **Linked siblings**. Set in Settings -> child -> "Siblings at the school"
+  (`sibling_ids` on `POST/PUT /api/children`; replaces the whole set, adding a
+  child who already has siblings brings their family along). Collecting one
+  child offers to collect their checked-in siblings in the same tap
+  (`also_attendance_ids`); each sibling is checked against *their own* pickup
+  list. Siblings share one statement.
+- **Undo**. Collect and roll-call check-in both show a toast with Undo for
+  6 s (uncollect / delete the attendance row).
+- **"Same as yesterday" roll call**. Roll Call offers the children from the
+  most recent earlier aftercare day (Friday, on a Monday; the last open day
+  after a holiday) who aren't in yet today. "Review list" shows them all
+  ticked; staff untick anyone absent and check the rest in with one tap,
+  then add anyone extra one by one as before. Archived children are left out.
+  `GET /api/attendance/previous-day` -> `{today, date, child_ids}`;
+  `POST /api/attendance/check-in-many {child_ids}` -> `{created_ids, skipped}`;
+  Undo (10 s) calls `POST /api/attendance/undo-check-in {attendance_ids}`,
+  which only removes today's rows that haven't been collected yet.
+- **Roll call filters**. Sort A-Z or "Most frequent" (most hours at
+  aftercare over the last 30 days, today included, 13:00 to collection,
+  uncollected days not counted; shown under each name), and narrow to one
+  class. A rolling window rather than the calendar month so the ranking is
+  useful on the 1st. Both combine with the search box and are remembered on
+  that device (localStorage `rcSort`, `rcGroup`). Hours come from
+  `GET /api/attendance/recent-hours` -> `{from, to, days, hours: {childId: hours}}`
+  -- hours only, no money, since this is the staff side.
+- **Late-pickup WhatsApp message**. Rows in "Awaiting pickup" get a Message
+  link from 15 min before the cutoff: a `wa.me` link to the parent's phone
+  (SA `0xx` -> `27xx`) with a polite pre-filled message. It deliberately makes
+  no fee claim. The Parent View link is only included when the page is opened
+  on a public hostname (on a LAN IP it would be useless to the parent).
+  Opening it calls `POST /api/attendance/:id/nudge`, so other staff see
+  "Messaged HH:MM".
+- **Monthly family statements**. `GET /api/admin/statements?month=YYYY-MM
+  [&family=f12|c7]` -> `reports.familyStatements()`. Rendered by
+  `/statement.html` (admin-gated): one A4 sheet per family with a per-day
+  table per child and the amount due; "Print or save as PDF" uses the
+  browser's print. Admin -> "Print all statements", or the per-child
+  "Statement" link. Family key = `f<family_id>` for linked siblings, else
+  `c<child id>`.
+- **Layout fixes**: Collect button no longer overlaps long names; roster no
+  longer clips its last column (the always-13:00 Arrival column was dropped);
+  on phones "Awaiting pickup" now sits above the roster; Settings rows have
+  Edit plus a "..." menu instead of four links.
+
+## 7. Real bugs hit and fixed during development
 
 Worth knowing so they don't get reintroduced:
 
@@ -138,14 +210,15 @@ Worth knowing so they don't get reintroduced:
    which is what's actually deployed. If deploying a third app to the same box
    later, check what's actually running (`docker ps`) rather than guessing.
 
-## 7. Deploying (LAN-only, not yet confirmed run)
+## 8. Deploying
 
-Exact commands are in `README.md`. Summary: `git clone` onto the Unraid box
-(`/mnt/user/appdata/howick-aftercare` suggested), `cp .env.example .env`, fill
-in `APP_USERNAME` / `APP_PASSWORD_HASH` / `SESSION_SECRET`, `docker build`,
-then a plain `docker run` (that Unraid install doesn't have the `docker
-compose` plugin, per the Shipments Tracker precedent — `docker-compose.yml`
-describes the same setup for if that ever changes).
+Exact commands are in `README.md`. Summary: the repo is cloned on the Unraid
+box (`/mnt/user/appdata/howick-aftercare` suggested), `.env` holds
+`APP_USERNAME` / `APP_PASSWORD_HASH` / `ADMIN_PIN_HASH` / `SESSION_SECRET`
+(+ optional `TUNNEL_TOKEN`, `SMTP_*`), `docker build`, then a plain
+`docker run` on port 8092 (that Unraid install has no `docker compose`
+plugin). To update: `git pull`, `docker build`, `docker rm -f` the container
+and `docker run` again -- the `data/` volume keeps the database.
 
 **Real secrets were generated and given to the user directly in chat, not
 committed anywhere** (consistent with `.env` being gitignored and never
@@ -157,25 +230,12 @@ node -e "console.log(require('bcryptjs').hashSync('paste-the-password-here', 10)
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"                                              # SESSION_SECRET
 ```
 
-## 8. Outstanding / next steps
+## 9. Outstanding / next steps
 
-- **Confirm the Unraid deployment actually happened and works** — visit
-  `http://<unraid-ip>:8092`, log in, run through Roll Call → Collect once for
-  real. This is the most likely next ask.
-- **Public URL**: blocked on confirming Cloudflare DNS access to
-  `howickpreprimary.co.za`. Once that's sorted, `docker-compose.yml` already
-  has an optional `cloudflared` service ready — create a tunnel, put its token
-  in `.env` as `TUNNEL_TOKEN`, add a published route to `app:3000`. This is a
-  separate, independent tunnel from the Shipments Tracker's — nothing shared,
-  nothing at risk of breaking that app.
-- **Settings UI**: `cutoff_time` / `hourly_rate` / `late_fee_per_block` /
-  `currency` exist in the database and are read by the stats/CSV endpoints,
-  but there's no screen to edit them yet — currently would need a direct DB
-  edit or a quick `PUT /api/settings` call.
-- **Loading the real roster**: the app has "Manage children" with both
-  one-at-a-time add and a bulk-paste box (one child per line, `"Name, Group"`)
-  — nobody has loaded Howick's actual class list in yet, it's still empty in
-  production. That's the first thing the user (or a teacher) needs to do once
-  deployed.
-- Nothing else known-broken. The two bugs in §6 are fixed and verified, not
-  just patched-and-hoped.
+- Merge the features branch (§6) and redeploy on Unraid.
+- **Pick a design direction** (parked, see §2).
+- Feature ideas offered but not built yet: find-a-child search on the tracker, per-day notes / allergy flags on the
+  roster, installable PWA (home-screen icon), kiosk mode for a wall tablet.
+- Public URL on a `howickpreprimary.co.za` subdomain: only if the school gets
+  that domain onto Cloudflare; swap the route in the same tunnel, no app
+  changes.

@@ -95,6 +95,28 @@
   .toast.show { opacity: 1; }
   .toast.error { background: var(--brand-coral); color: #fff; }
 
+  .sib-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .sib-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-radius: 999px; background: var(--brand-sky-tint); color: var(--ink); font-size: 12.5px; font-weight: 600; }
+  .sib-chip button { appearance: none; border: none; background: none; cursor: pointer; color: var(--ink-soft); font-size: 15px; line-height: 1; padding: 0 4px; border-radius: 999px; }
+  .sib-chip button:hover { color: var(--brand-coral); }
+  .sib-chip button:focus-visible { outline: 2px solid var(--brand-blue); }
+  .sib-add { flex: 1; min-width: 200px; }
+  .sib-line { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+
+  /* One "More" menu per row instead of four links on every row. */
+  .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; }
+  .menu-wrap { position: relative; }
+  .menu-btn { appearance: none; border: 1px solid transparent; background: none; cursor: pointer; width: 30px; height: 30px; border-radius: 8px; color: var(--ink-soft); display: inline-grid; place-items: center; }
+  .menu-btn:hover, .menu-btn[aria-expanded="true"] { background: var(--surface-2); border-color: var(--line-strong); color: var(--ink); }
+  .menu-btn:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 1px; }
+  .menu-btn svg { width: 16px; height: 16px; }
+  /* fixed, placed by JS: the table's scroll container would clip an absolute menu */
+  .menu { position: fixed; z-index: 30; min-width: 190px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; }
+  .menu button { appearance: none; border: none; background: none; cursor: pointer; text-align: left; padding: 8px 10px; border-radius: 8px; font-family: var(--font-body); font-size: 13px; color: var(--ink); }
+  .menu button:hover, .menu button:focus-visible { background: var(--surface-2); outline: none; }
+  .menu button.danger { color: var(--brand-coral); }
+  .menu hr { border: none; border-top: 1px solid var(--line); margin: 4px 2px; }
+
   .settings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   @media (max-width: 720px) { .settings-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
@@ -146,8 +168,17 @@
         </div>
         <div class="field">
           <label for="childPickup">Authorized pickups (comma-separated)</label>
-          <input type="text" id="childPickup" placeholder="e.g. T. Mokoena, Grandmother, Aftercare van" />
+          <input type="text" id="childPickup" placeholder="e.g. Grandmother (Nomsa), Aftercare van" />
         </div>
+        <p class="field-hint" style="margin-top:-4px;">Parents can always collect unless you write "only", e.g. <strong>Father only</strong>. Anyone else collecting gets a warning on the tracker before release.</p>
+        <div class="field">
+          <label for="siblingAdd">Siblings at the school</label>
+          <div class="sib-chips">
+            <span id="siblingChips" class="sib-chips"></span>
+            <select id="siblingAdd" class="sib-add"><option value="">Add a sibling…</option></select>
+          </div>
+        </div>
+        <p class="field-hint" style="margin-top:-4px;">Linked siblings can be collected together in one tap and share one monthly statement.</p>
         <div class="field-error" id="childError" hidden></div>
         <div class="submit-row" style="display:flex; gap:8px;">
           <button type="submit" class="btn btn-primary" id="childSubmitBtn" style="flex:1;">Add child</button>
@@ -272,6 +303,7 @@
   async function loadChildren() {
     state.children = await api('/children?all=1');
     renderTable();
+    renderSiblingPicker();
   }
 
   function renderTable() {
@@ -291,18 +323,28 @@
 
     el('adminBody').innerHTML = rows.map(c => `
       <tr class="${c.active ? '' : 'archived-row'}">
-        <td>${escapeHtml(c.full_name)}</td>
+        <td>${escapeHtml(c.full_name)}${siblingLine(c)}</td>
         <td>${groupChipHtml(c.group_name)}</td>
         <td>${escapeHtml(c.parent_name || '—')}</td>
         <td>${escapeHtml(c.parent_phone || '—')}</td>
         <td>${escapeHtml(c.pickup_notes || '—')}</td>
-        <td style="white-space:nowrap;">
-          <button class="row-action" data-copy-link="${c.id}">Copy parent link</button>
-          <button class="row-action" data-new-link="${c.id}">New link</button>
-          <button class="row-action" data-edit="${c.id}">Edit</button>
-          ${c.active
-            ? `<button class="row-action danger" data-archive="${c.id}">Archive</button>`
-            : `<button class="row-action" data-restore="${c.id}">Restore</button>`}
+        <td>
+          <div class="row-actions">
+            <button class="row-action" data-edit="${c.id}">Edit</button>
+            <div class="menu-wrap">
+              <button class="menu-btn" data-menu="${c.id}" aria-haspopup="true" aria-expanded="false" aria-label="More actions for ${escapeHtml(c.full_name)}">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+              </button>
+              <div class="menu" role="menu" hidden>
+                <button role="menuitem" data-copy-link="${c.id}">Copy parent link</button>
+                <button role="menuitem" data-new-link="${c.id}">Make a new parent link</button>
+                <hr>
+                ${c.active
+                  ? `<button role="menuitem" class="danger" data-archive="${c.id}">Archive</button>`
+                  : `<button role="menuitem" data-restore="${c.id}">Restore</button>`}
+              </div>
+            </div>
+          </div>
         </td>
       </tr>
     `).join('');
@@ -312,21 +354,99 @@
   el('adminGroupFilter').addEventListener('change', renderTable);
   el('showArchived').addEventListener('change', renderTable);
 
+  // ---------- siblings ----------
+  let formSiblingIds = [];
+
+  function siblingsOf(c) {
+    return c.family_id ? state.children.filter(x => x.family_id === c.family_id && x.id !== c.id) : [];
+  }
+  function siblingLine(c) {
+    const sibs = siblingsOf(c);
+    return sibs.length ? `<span class="sib-line">Siblings: ${escapeHtml(sibs.map(x => x.full_name).join(', '))}</span>` : '';
+  }
+  function renderSiblingPicker() {
+    const selfId = Number(el('childId').value) || null;
+    el('siblingChips').innerHTML = formSiblingIds.map(id => {
+      const c = state.children.find(x => x.id === id);
+      if (!c) return '';
+      return `<span class="sib-chip">${escapeHtml(c.full_name)}<button type="button" data-unsib="${id}" aria-label="Remove ${escapeHtml(c.full_name)} as a sibling">&times;</button></span>`;
+    }).join('');
+    const options = state.children
+      .filter(c => c.active && c.id !== selfId && !formSiblingIds.includes(c.id))
+      .map(c => `<option value="${c.id}">${escapeHtml(c.full_name)}${c.group_name ? ' (' + escapeHtml(c.group_name) + ')' : ''}</option>`).join('');
+    el('siblingAdd').innerHTML = '<option value="">Add a sibling…</option>' + options;
+  }
+  el('siblingAdd').addEventListener('change', () => {
+    const id = Number(el('siblingAdd').value);
+    if (!id) return;
+    // Picking a child who already has siblings brings the whole family in.
+    const picked = state.children.find(x => x.id === id);
+    const family = picked ? [picked, ...siblingsOf(picked)] : [];
+    const selfId = Number(el('childId').value) || null;
+    family.forEach(c => { if (c.id !== selfId && !formSiblingIds.includes(c.id)) formSiblingIds.push(c.id); });
+    renderSiblingPicker();
+  });
+  el('siblingChips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-unsib]');
+    if (!b) return;
+    formSiblingIds = formSiblingIds.filter(id => id !== Number(b.dataset.unsib));
+    renderSiblingPicker();
+  });
+
   function resetChildForm() {
     el('childId').value = '';
     el('childForm').reset();
     el('childError').hidden = true;
     el('childSubmitBtn').textContent = 'Add child';
     el('childCancelBtn').hidden = true;
+    formSiblingIds = [];
+    renderSiblingPicker();
   }
   el('childCancelBtn').addEventListener('click', resetChildForm);
 
+  // ---------- row "More" menus ----------
+  function closeMenus(except) {
+    document.querySelectorAll('.menu-btn[aria-expanded="true"]').forEach(b => {
+      if (b === except) return;
+      b.setAttribute('aria-expanded', 'false');
+      b.nextElementSibling.hidden = true;
+    });
+  }
+  document.addEventListener('click', (e) => { if (!e.target.closest('.menu-wrap')) closeMenus(); });
+  window.addEventListener('scroll', () => closeMenus(), true);
+  window.addEventListener('resize', () => closeMenus());
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const open = document.querySelector('.menu-btn[aria-expanded="true"]');
+    closeMenus();
+    if (open) open.focus();
+  });
+
   el('adminBody').addEventListener('click', async (e) => {
-    const editId = e.target.dataset && e.target.dataset.edit;
-    const archiveId = e.target.dataset && e.target.dataset.archive;
-    const restoreId = e.target.dataset && e.target.dataset.restore;
-    const copyLinkId = e.target.dataset && e.target.dataset.copyLink;
-    const newLinkId = e.target.dataset && e.target.dataset.newLink;
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.dataset.menu) {
+      const open = t.getAttribute('aria-expanded') !== 'true';
+      closeMenus(t);
+      t.setAttribute('aria-expanded', String(open));
+      const menu = t.nextElementSibling;
+      menu.hidden = !open;
+      if (open) {
+        const r = t.getBoundingClientRect();
+        const h = menu.offsetHeight, w = menu.offsetWidth;
+        const below = r.bottom + 4 + h <= window.innerHeight;
+        menu.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 4 - h)) + 'px';
+        menu.style.left = Math.max(8, r.right - w) + 'px';
+        const first = menu.querySelector('button'); if (first) first.focus({ preventScroll: true });
+      }
+      return;
+    }
+    if (t.closest('.menu')) closeMenus();
+    const editId = t.dataset.edit;
+    const archiveId = t.dataset.archive;
+    const restoreId = t.dataset.restore;
+    const copyLinkId = t.dataset.copyLink;
+    const newLinkId = t.dataset.newLink;
 
     if (copyLinkId) {
       const c = state.children.find(x => String(x.id) === copyLinkId);
@@ -355,6 +475,8 @@
       el('childParent').value = c.parent_name || '';
       el('childPhone').value = c.parent_phone || '';
       el('childPickup').value = c.pickup_notes || '';
+      formSiblingIds = siblingsOf(c).map(x => x.id);
+      renderSiblingPicker();
       el('childSubmitBtn').textContent = 'Save changes';
       el('childCancelBtn').hidden = false;
       el('childName').focus();
@@ -379,7 +501,8 @@
       group_name: el('childGroup').value || null,
       parent_name: el('childParent').value.trim() || null,
       parent_phone: el('childPhone').value.trim() || null,
-      pickup_notes: el('childPickup').value.trim() || null
+      pickup_notes: el('childPickup').value.trim() || null,
+      sibling_ids: formSiblingIds
     };
     el('childError').hidden = true;
     try {
