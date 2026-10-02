@@ -26,6 +26,8 @@ decisions already made, and what's still outstanding.
   - **Same as yesterday**: Roll Call can start from the last aftercare day's
     list (Friday's, on a Monday); untick anyone who isn't here and check the
     rest in with one tap.
+  - **Roll call filters**: sort A–Z or by most hours this month, and show one
+    class at a time.
   - **Undo** after every collect and roll-call check-in.
   - **Late-pickup WhatsApp message** to the parent from 15 minutes before
     closing, marked "Messaged" so other staff can see it's been done.

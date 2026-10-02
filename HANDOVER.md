@@ -156,6 +156,13 @@ new column -- never edit the `CREATE TABLE` alone.
   `POST /api/attendance/check-in-many {child_ids}` -> `{created_ids, skipped}`;
   Undo (10 s) calls `POST /api/attendance/undo-check-in {attendance_ids}`,
   which only removes today's rows that haven't been collected yet.
+- **Roll call filters**. Sort A-Z or "Most frequent" (most hours at
+  aftercare so far this month, 13:00 to collection, uncollected days not
+  counted; shown under each name), and narrow to one class. Both combine with
+  the search box and are remembered on that device (localStorage `rcSort`,
+  `rcGroup`). Hours come from `GET /api/attendance/month-hours` ->
+  `{month, hours: {childId: hours}}` -- hours only, no money, since this is
+  the staff side.
 - **Late-pickup WhatsApp message**. Rows in "Awaiting pickup" get a Message
   link from 15 min before the cutoff: a `wa.me` link to the parent's phone
   (SA `0xx` -> `27xx`) with a polite pre-filled message. It deliberately makes

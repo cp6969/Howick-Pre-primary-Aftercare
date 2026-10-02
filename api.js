@@ -219,6 +219,20 @@ router.get('/attendance/previous-day', (req, res) => {
   res.json({ today, date: prev, child_ids: childIds });
 });
 
+// Roll call's "Most frequent" sort: hours each child has spent at aftercare
+// so far this month (13:00 to collection; days not yet collected don't
+// count). Hours only, no money -- this is the staff side, not Admin.
+router.get('/attendance/month-hours', (req, res) => {
+  const month = todaySAST().slice(0, 7);
+  const rows = db.prepare(`
+    SELECT child_id, SUM(collected_at - checked_in_at) AS ms FROM attendance
+    WHERE date LIKE ? AND collected_at IS NOT NULL GROUP BY child_id
+  `).all(month + '-%');
+  const hours = {};
+  for (const r of rows) hours[r.child_id] = Math.round(Math.max(r.ms, 0) / 360000) / 10;
+  res.json({ month, hours });
+});
+
 // Checks in several children at once (roll call's "same as yesterday").
 // Children already in today are left as they are; archived or unknown ids
 // are skipped (counted in "skipped"). Answers with the attendance ids this

@@ -161,6 +161,22 @@
   .btn-danger { background: var(--brand-coral); color: #fff; }
   .btn-danger:hover { filter: brightness(1.06); }
 
+  .rc-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 20px 10px; background: var(--surface-2); }
+  .seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line-strong); }
+  .seg button { border: none; background: none; font-family: var(--font-display); font-size: 12px; font-weight: 600; color: var(--ink-soft); padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .seg button.on { background: var(--brand-orange); color: #fff; }
+  .seg button:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 1px; }
+  .rc-filters select { flex: 1; min-width: 140px; font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: var(--ink); }
+  .rc-hours { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+  .checklist-item .who { flex: 1; }
+  .checklist-item .who > div:last-child { min-width: 0; }
+  .checklist-item > .btn { flex-shrink: 0; white-space: nowrap; }
+  @media (max-width: 520px) {
+    .checklist-item { padding: 10px 16px; }
+    .rc-filters { padding: 0 16px 10px; }
+    .rc-hours-sep { display: none; }
+    .rc-hours { display: block; margin-top: 2px; }
+  }
   .same-as { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 20px 6px; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 12px; background: var(--surface-2); }
   .same-as b { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 600; }
   .same-as span { font-size: 12px; color: var(--ink-soft); }
@@ -339,6 +355,13 @@
     <div id="checkinPick">
       <div class="search-row" style="border-bottom:none;">
         <input type="text" id="checkinSearch" placeholder="Search child…" />
+      </div>
+      <div class="rc-filters">
+        <div class="seg" role="group" aria-label="Sort the list">
+          <button type="button" data-rc-sort="az" aria-pressed="true" class="on">A–Z</button>
+          <button type="button" data-rc-sort="frequent" aria-pressed="false">Most frequent</button>
+        </div>
+        <select id="checkinGroup" aria-label="Filter by class"><option value="">All classes</option></select>
       </div>
       <div class="same-as" id="sameAsBox" hidden>
         <div><b id="sameAsTitle">Same as yesterday?</b><span id="sameAsSub"></span></div>
@@ -830,25 +853,75 @@
     return sibs.length ? ` &middot; sibling of ${escapeHtml(joinNames(sibs))}` : '';
   }
 
+  // Roll call filters: sort A-Z or by hours this month ("Most frequent"),
+  // and narrow to one class. Remembered on this device between opens.
+  const rc = { sort: 'az', group: '', hours: {} };
+  try {
+    rc.sort = localStorage.getItem('rcSort') === 'frequent' ? 'frequent' : 'az';
+    rc.group = localStorage.getItem('rcGroup') || '';
+  } catch (e) {}
+
+  function fmtHours(h) { return (Math.round(h * 10) / 10).toString().replace(/\.0$/, '') + ' h'; }
+
+  function syncCheckinFilters() {
+    document.querySelectorAll('[data-rc-sort]').forEach(b => {
+      const on = b.dataset.rcSort === rc.sort;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    const sel = el('checkinGroup');
+    const groups = [...new Set(state.children.map(c => c.group_name).filter(Boolean))];
+    const order = state.groups && state.groups.length ? state.groups : groups.sort();
+    sel.innerHTML = '<option value="">All classes</option>' +
+      order.filter(g => groups.includes(g)).map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+    if (rc.group && !groups.includes(rc.group)) rc.group = '';
+    sel.value = rc.group;
+  }
+
   function renderCheckinList() {
     const q = (el('checkinSearch').value || '').toLowerCase().trim();
     const checkedInIds = new Set(state.today.map(r => r.child_id));
-    const available = state.children.filter(c => !checkedInIds.has(c.id) &&
+    const notIn = state.children.filter(c => !checkedInIds.has(c.id));
+    const available = notIn.filter(c => (!rc.group || c.group_name === rc.group) &&
       (!q || c.full_name.toLowerCase().includes(q) || (c.group_name || '').toLowerCase().includes(q)));
+    const byName = (a, b) => a.full_name.localeCompare(b.full_name);
+    available.sort(rc.sort === 'frequent'
+      ? (a, b) => (rc.hours[b.id] || 0) - (rc.hours[a.id] || 0) || byName(a, b)
+      : byName);
+    el('checkinEmpty').textContent = !notIn.length ? 'Everyone active is already checked in today.'
+      : rc.group && !q ? `Everyone in ${rc.group} is already checked in.` : 'No one matches.';
     el('checkinEmpty').hidden = available.length !== 0;
-    el('checkinList').innerHTML = available.map(c => `
+    el('checkinList').innerHTML = available.map(c => {
+      const h = rc.hours[c.id] || 0;
+      const hours = rc.sort === 'frequent' ? `<span class="rc-hours-sep"> &middot; </span><span class="rc-hours">${h ? fmtHours(h) + ' this month' : 'none yet this month'}</span>` : '';
+      return `
       <div class="checklist-item">
         <div class="who">
           <div class="avatar ${avatarClass(c.full_name)}" style="${avatarStyle(c.group_name)}">${escapeHtml(initials(c.full_name))}</div>
           <div>
             <div class="child-name">${escapeHtml(c.full_name)}</div>
-            <div class="child-group">${groupBadgeHtml(c.group_name)}${siblingHint(c)}</div>
+            <div class="child-group">${groupBadgeHtml(c.group_name)}${siblingHint(c)}${hours}</div>
           </div>
         </div>
         <button class="btn btn-primary btn-sm" data-checkin="${c.id}">Check in</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
+
+  document.querySelectorAll('[data-rc-sort]').forEach(b => b.addEventListener('click', () => {
+    rc.sort = b.dataset.rcSort;
+    try { localStorage.setItem('rcSort', rc.sort); } catch (e) {}
+    syncCheckinFilters();
+    renderCheckinList();
+    el('checkinList').scrollTop = 0;
+  }));
+  el('checkinGroup').addEventListener('change', (e) => {
+    rc.group = e.target.value;
+    try { localStorage.setItem('rcGroup', rc.group); } catch (e2) {}
+    renderCheckinList();
+    el('checkinList').scrollTop = 0;
+  });
 
   // ---------- same as yesterday ----------
   // The children from the last aftercare day (Friday, on a Monday) who
@@ -943,9 +1016,15 @@
   el('newCheckinBtn').addEventListener('click', () => {
     el('checkinSearch').value = '';
     setRollCallMode(false);
+    syncCheckinFilters();
     renderCheckinList();
     el('sameAsBox').hidden = true;
     openModal('checkinModal');
+    if (!state.groups) api('/groups').then(g => { state.groups = g; syncCheckinFilters(); }).catch(() => {});
+    api('/attendance/month-hours').then(d => {
+      rc.hours = d.hours || {};
+      if (!el('checkinModal').hidden && rc.sort === 'frequent') renderCheckinList();
+    }).catch(() => {});
     api('/attendance/previous-day').then(d => {
       sameAs.date = d.date; sameAs.today = d.today; sameAs.childIds = d.child_ids;
       if (!el('checkinModal').hidden && !el('checkinPick').hidden) renderSameAsBox();
